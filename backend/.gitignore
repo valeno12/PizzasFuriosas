@@ -1,0 +1,6 @@
+.env
+bin/
+obj/
+*.sqlite
+*.sqlite3
+*.db
