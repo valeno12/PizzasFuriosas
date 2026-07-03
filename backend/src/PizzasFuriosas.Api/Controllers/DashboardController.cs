@@ -12,19 +12,28 @@ namespace PizzasFuriosas.Api.Controllers;
 [Route("api/[controller]")]
 public class DashboardController(AppDbContext context) : ControllerBase
 {
+    // Npgsql exige DateTime en UTC para "timestamp with time zone".
+    private static DateTime UtcOrMin(DateTime? value) =>
+        value?.ToUniversalTime() ?? DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+
+    private static DateTime UtcOrMax(DateTime? value) =>
+        value?.ToUniversalTime() ?? DateTime.SpecifyKind(DateTime.MaxValue, DateTimeKind.Utc);
+
     [HttpGet("balance")]
     public async Task<IActionResult> GetBalance([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var startDate = from ?? DateTime.MinValue;
-        var endDate = to ?? DateTime.MaxValue;
+        var startDate = UtcOrMin(from);
+        var endDate = UtcOrMax(to);
 
         var ordersQuery = context.Orders
+            .AsNoTracking()
             .Where(o => o.StatusId == 5 && o.CreatedAt >= startDate && o.CreatedAt <= endDate);
 
         var totalOrdersIncome = await ordersQuery.SumAsync(o => o.TotalPrice);
         var deliveryFees = await ordersQuery.SumAsync(o => o.DeliveryCost);
 
         var eventsList = await context.Events
+            .AsNoTracking()
             .Include(e => e.Surcharges)
             .Where(e => e.CompletedAt != null && e.EventDate >= startDate && e.EventDate <= endDate)
             .ToListAsync();
@@ -34,6 +43,7 @@ public class DashboardController(AppDbContext context) : ControllerBase
         );
 
         var totalExpenses = await context.Purchases
+            .AsNoTracking()
             .Where(p => p.Date >= startDate && p.Date <= endDate)
             .SumAsync(p => p.Amount);
 
@@ -56,10 +66,11 @@ public class DashboardController(AppDbContext context) : ControllerBase
     [HttpGet("statistics")]
     public async Task<IActionResult> GetStatistics([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var startDate = from ?? DateTime.MinValue;
-        var endDate = to ?? DateTime.MaxValue;
+        var startDate = UtcOrMin(from);
+        var endDate = UtcOrMax(to);
 
         var completedOrdersQuery = context.Orders
+            .AsNoTracking()
             .Include(o => o.Items)
             .ThenInclude(i => i.Product)
             .Include(o => o.Customer)

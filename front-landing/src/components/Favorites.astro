@@ -1,0 +1,27 @@
+---
+// Capturas reales de WhatsApp (prueba social). Los archivos ya vienen con el texto quemado.
+const messages = [
+  { src: '/SaveClip.App_503498941_18063722015274201_1203700734263063249_n.jpg', caption: 'Directo del chat' },
+  { src: '/SaveClip.App_503582086_18063722033274201_3037736954583845716_n.jpg', caption: 'Favorita repetida' },
+  { src: '/SaveClip.App_502339055_18063722024274201_1880509447429888319_n.jpg', caption: 'Sin retoques' },
+  { src: '/SaveClip.App_731808324_18102074504274201_5316625905645456420_n.jpg', caption: 'Pedido real' },
+  { src: '/SaveClip.App_726838772_18101064803274201_6562814541515865771_n.jpg', caption: 'La gente vuelve' },
+]
+---
+
+<section class="favorites">
+  <div class="container">
+    <h2 class="brush">Las favoritas de la gente</h2>
+    <p>Mensajes reales de quienes ya pidieron. Sin filtros ni retoques.</p>
+    <div class="message-wall">
+      {
+        messages.map((m) => (
+          <figure class="message-card">
+            <img src={m.src} alt="Mensaje de un cliente sobre Pizza Furiosa" loading="lazy" />
+            <figcaption>{m.caption}</figcaption>
+          </figure>
+        ))
+      }
+    </div>
+  </div>
+</section>

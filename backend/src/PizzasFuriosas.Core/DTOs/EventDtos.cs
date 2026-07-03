@@ -37,6 +37,16 @@ public record EventResponse(
     List<EventPaymentResponse> Payments
 );
 
+// Edita un evento abierto. Viáticos y pagos tienen sus propios endpoints.
+public record UpdateEventRequest(
+    DateTime EventDate,
+    string Location,
+    string? Notes,
+    int PizzaCount,
+    decimal PricePerPizza,
+    decimal Deposit
+);
+
 public record CompleteEventRequest(
     int ExtraPizzas,
     List<CreateEventSurchargeRequest> ExtraSurcharges

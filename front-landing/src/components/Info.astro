@@ -1,0 +1,44 @@
+---
+import { BUSINESS } from '../config'
+---
+
+<section class="info" id="horarios">
+  <div class="container info-layout">
+    <div>
+      <h2 class="brush">Horarios y zona</h2>
+      <div class="info-list">
+        <div class="info-item">
+          <div class="info-icon">01</div>
+          <div>
+            <strong>{BUSINESS.days}</strong>
+            <span>Horario a confirmar por WhatsApp</span>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">02</div>
+          <div>
+            <strong>{BUSINESS.city}</strong>
+            <span>Consultá si llegamos a tu zona</span>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">03</div>
+          <div>
+            <strong>Take away o envío</strong>
+            <span>Elegilo al armar tu pedido</span>
+          </div>
+        </div>
+      </div>
+      <div class="info-actions">
+        <a class="btn btn-primary" href="#pedido">Armar pedido</a>
+        <a class="btn btn-outline" href="#carta">Volver a la carta</a>
+      </div>
+    </div>
+    <div class="event-card">
+      <img class="photo" src="/images/IMG_20260612_221848.webp" alt="Pizzas para un evento" loading="lazy" />
+      <p class="brush title">¿Un evento que se merece pizza de verdad?</p>
+      <p>Llevamos el horno furioso a donde estés. Escribinos al {BUSINESS.phoneDisplay}.</p>
+      <a class="event-cta" href="#horarios">Consultar evento</a>
+    </div>
+  </div>
+</section>

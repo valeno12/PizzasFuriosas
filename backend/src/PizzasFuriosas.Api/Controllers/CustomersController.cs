@@ -14,9 +14,12 @@ namespace PizzasFuriosas.Api.Controllers;
 public class CustomersController(AppDbContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<ActionResult<ApiResponse<PaginatedResult<CustomerResponse>>>> GetAll([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var query = context.Customers.AsQueryable();
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var query = context.Customers.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -30,6 +33,7 @@ public class CustomersController(AppDbContext context) : ControllerBase
         var totalCount = await query.CountAsync();
 
         var customers = await query
+            .OrderBy(c => c.Name) // paginar sin orden estable puede duplicar/saltear ítems entre páginas
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(c => new CustomerResponse(c.Id, c.Name, c.Phone, c.Notes))
@@ -39,10 +43,36 @@ public class CustomersController(AppDbContext context) : ControllerBase
         return Ok(new ApiResponse<PaginatedResult<CustomerResponse>>(paginatedResult));
     }
 
+    // Resumen para la ficha del cliente: pedidos totales, gastado y producto favorito.
+    // Se excluyen cancelados; lo gastado cuenta solo pedidos entregados.
+    [HttpGet("{id}/stats")]
+    public async Task<ActionResult<ApiResponse<CustomerStatsResponse>>> GetStats(int id)
+    {
+        var customerExists = await context.Customers.AnyAsync(c => c.Id == id);
+        if (!customerExists) return NotFound(ApiResponse.Error("Cliente no encontrado"));
+
+        var orders = context.Orders.AsNoTracking().Where(o => o.CustomerId == id && o.StatusId != 6);
+
+        var totalOrders = await orders.CountAsync();
+        var totalSpent = await orders.Where(o => o.StatusId == 5).SumAsync(o => o.TotalPrice);
+
+        var favoriteProduct = await context.OrderItems.AsNoTracking()
+            .Where(i => i.Order.CustomerId == id && i.Order.StatusId != 6)
+            .GroupBy(i => i.Product.Name)
+            .Select(g => new { Name = g.Key, Quantity = g.Sum(i => i.Quantity) })
+            .OrderByDescending(x => x.Quantity)
+            .Select(x => x.Name)
+            .FirstOrDefaultAsync();
+
+        var response = new CustomerStatsResponse(totalOrders, totalSpent, favoriteProduct);
+        return Ok(new ApiResponse<CustomerStatsResponse>(response));
+    }
+
     [HttpGet("{id}/addresses")]
-    public async Task<IActionResult> GetAddresses(int id)
+    public async Task<ActionResult<ApiResponse<List<AddressResponse>>>> GetAddresses(int id)
     {
         var addresses = await context.Addresses
+            .AsNoTracking()
             .Where(a => a.CustomerId == id)
             .Select(a => new AddressResponse(a.Id, a.CustomerId, a.Street, a.Number, a.Apartment, a.Notes))
             .ToListAsync();
@@ -51,7 +81,7 @@ public class CustomersController(AppDbContext context) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateCustomerRequest request)
+    public async Task<ActionResult<ApiResponse<CustomerResponse>>> Create(CreateCustomerRequest request)
     {
         var customer = new Customer
         {
@@ -68,7 +98,7 @@ public class CustomersController(AppDbContext context) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, UpdateCustomerRequest request)
+    public async Task<ActionResult<ApiResponse<CustomerResponse>>> Update(int id, UpdateCustomerRequest request)
     {
         var customer = await context.Customers.FirstOrDefaultAsync(c => c.Id == id);
         if (customer == null) return NotFound(ApiResponse.Error("Cliente no encontrado"));
@@ -84,7 +114,7 @@ public class CustomersController(AppDbContext context) : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<ActionResult<ApiResponse>> Delete(int id)
     {
         var customer = await context.Customers.FirstOrDefaultAsync(c => c.Id == id);
         if (customer == null) return NotFound(ApiResponse.Error("Cliente no encontrado"));
@@ -96,7 +126,7 @@ public class CustomersController(AppDbContext context) : ControllerBase
     }
 
     [HttpPost("{id}/addresses")]
-    public async Task<IActionResult> AddAddress(int id, CreateAddressRequest request)
+    public async Task<ActionResult<ApiResponse<AddressResponse>>> AddAddress(int id, CreateAddressRequest request)
     {
         var customerExists = await context.Customers.AnyAsync(c => c.Id == id);
         if (!customerExists) return NotFound(ApiResponse.Error("Cliente no encontrado"));

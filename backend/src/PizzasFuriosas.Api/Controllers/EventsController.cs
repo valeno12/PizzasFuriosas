@@ -24,7 +24,11 @@ public class EventsController(AppDbContext context) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
         var query = context.Events
+            .AsNoTracking()
             .Include(e => e.Customer)
             .Include(e => e.Surcharges)
             .Include(e => e.Payments)
@@ -72,6 +76,7 @@ public class EventsController(AppDbContext context) : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var e = await context.Events
+            .AsNoTracking()
             .Include(ev => ev.Customer)
             .Include(ev => ev.Surcharges)
             .Include(ev => ev.Payments)
@@ -138,6 +143,26 @@ public class EventsController(AppDbContext context) : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = newEvent.Id }, new ApiResponse<int>(newEvent.Id, "Evento creado exitosamente"));
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, UpdateEventRequest request)
+    {
+        var e = await context.Events.FirstOrDefaultAsync(ev => ev.Id == id);
+        if (e == null) return NotFound(ApiResponse.Error("Evento no encontrado"));
+
+        if (e.CancelledAt.HasValue || e.CompletedAt.HasValue)
+            return Conflict(ApiResponse.Error("Un evento cerrado no se puede editar"));
+
+        e.EventDate = request.EventDate;
+        e.Location = request.Location;
+        e.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+        e.PizzaCount = request.PizzaCount;
+        e.PricePerPizza = request.PricePerPizza;
+        e.Deposit = request.Deposit;
+
+        await context.SaveChangesAsync();
+        return Ok(ApiResponse.Ok("Evento actualizado"));
+    }
+
     [HttpPut("{id}/complete")]
     public async Task<IActionResult> Complete(int id, CompleteEventRequest request)
     {
@@ -184,6 +209,9 @@ public class EventsController(AppDbContext context) : ControllerBase
     {
         var e = await context.Events.FirstOrDefaultAsync(ev => ev.Id == id);
         if (e == null) return NotFound(ApiResponse.Error("Evento no encontrado"));
+
+        // Se permiten pagos sobre eventos completados (cobrar saldo), pero no sobre cancelados.
+        if (e.CancelledAt.HasValue) return Conflict(ApiResponse.Error("El evento está cancelado; no admite pagos"));
 
         context.EventPayments.Add(new EventPayment
         {

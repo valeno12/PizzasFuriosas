@@ -20,3 +20,4 @@ appsettings.*.json
 !appsettings.json
 !appsettings.Development.json
 plan.md
+.claude

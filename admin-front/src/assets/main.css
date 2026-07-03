@@ -1,0 +1,220 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================================================
+   Design tokens — única fuente de verdad del theme.
+   Tailwind los expone como colores en tailwind.config.js.
+   ================================================================ */
+@layer base {
+  :root {
+    --background: oklch(0.17 0.006 60);
+    --foreground: oklch(0.97 0.005 80);
+    --surface: oklch(0.215 0.007 60);
+    --surface-2: oklch(0.255 0.009 60);
+    --popover: oklch(0.235 0.008 60);
+    --field: oklch(0.245 0.008 60);
+
+    --primary: oklch(0.7 0.2 38);
+    --primary-foreground: oklch(0.14 0.005 60);
+    --primary-soft: color-mix(in oklch, var(--primary) 14%, var(--surface));
+
+    --muted-foreground: oklch(0.68 0.01 80);
+    --subtle-foreground: oklch(0.55 0.01 80);
+
+    --border: oklch(0.32 0.009 60);
+    --line: color-mix(in oklch, var(--border) 68%, transparent);
+    --line-soft: color-mix(in oklch, var(--border) 52%, transparent);
+    --line-strong: oklch(0.4 0.01 60);
+
+    --danger: oklch(0.55 0.2 25);
+    --danger-foreground: oklch(0.98 0.005 80);
+    --danger-soft: color-mix(in oklch, var(--danger) 18%, transparent);
+    --success: oklch(0.68 0.16 145);
+    --success-soft: color-mix(in oklch, var(--success) 18%, transparent);
+    --warning: oklch(0.8 0.16 75);
+    --warning-soft: color-mix(in oklch, var(--warning) 18%, transparent);
+    --info: oklch(0.72 0.08 230);
+    --info-soft: color-mix(in oklch, var(--info) 18%, transparent);
+
+    --sidebar-width: 240px;
+  }
+
+  html {
+    min-height: 100%;
+    background: var(--background);
+    color-scheme: dark;
+  }
+
+  body {
+    min-height: 100dvh;
+    margin: 0;
+    overflow-x: hidden;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: theme('fontFamily.sans');
+    font-size: 15px;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  a {
+    font: inherit;
+    outline: none;
+  }
+
+  button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 35%, transparent);
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Fuente de íconos de Google (Material Symbols) */
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    font-variation-settings:
+      'FILL' 0,
+      'wght' 450,
+      'GRAD' 0,
+      'opsz' 24;
+  }
+}
+
+/* ================================================================
+   Primitivas compartidas — patrones repetidos en muchas vistas.
+   Todo lo demás usa utilities de Tailwind directamente.
+   ================================================================ */
+@layer components {
+  /* Base de <input>, <select> y <textarea> */
+  .form-control {
+    @apply w-full min-h-[44px] rounded-xl border border-line bg-field px-3 py-2.5 text-foreground transition-colors placeholder:text-subtle focus:border-primary;
+  }
+
+  .form-control.invalid {
+    @apply border-danger;
+  }
+
+  /* Contenedor de lista compacta (cards apiladas con divisores) */
+  .list-panel {
+    @apply grid overflow-hidden rounded-[14px] border border-line-soft bg-surface divide-y divide-line-soft;
+  }
+
+  /* Fila de lista compacta */
+  .list-row {
+    @apply grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 bg-transparent px-3.5 py-3 text-left text-foreground;
+  }
+
+  .list-row-title {
+    @apply truncate text-[0.94rem] font-bold text-foreground;
+  }
+
+  .list-row-meta {
+    @apply mt-0.5 truncate text-[0.8rem] text-muted;
+  }
+
+  /* Etiqueta de sección (texto chico en mayúsculas entre bloques) */
+  .section-label {
+    @apply flex items-center justify-between gap-2 pb-1 pt-2 text-[0.7rem] font-bold uppercase tracking-[0.08em] text-muted;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ================================================================
+   Transiciones globales de Vue (<Transition name="...">)
+   ================================================================ */
+.page-enter-active,
+.page-leave-active,
+.drawer-enter-active,
+.drawer-leave-active,
+.modal-enter-active,
+.modal-leave-active,
+.toast-enter-active,
+.toast-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 180ms ease;
+}
+
+.page-enter-from,
+.page-leave-to,
+.drawer-enter-from,
+.drawer-leave-to,
+.modal-enter-from,
+.modal-leave-to,
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+}
+
+/* La transición de página es solo fade: un transform en el contenedor rompe los
+   position: fixed internos (ej. el footer del wizard "saltaba" al entrar). */
+
+.drawer-enter-from .drawer-panel,
+.drawer-leave-to .drawer-panel {
+  transform: translateX(24px);
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  transform: translateY(-8px);
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-12px);
+}

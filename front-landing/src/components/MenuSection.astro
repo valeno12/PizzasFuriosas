@@ -1,0 +1,79 @@
+---
+// La carta y el panel de pedido se llenan en el cliente desde la API pública.
+// El markup acá es solo la estructura + estados de carga/error.
+---
+
+<section class="menu" id="carta">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2 class="brush">Carta Furiosa</h2>
+        <div class="section-note">Elegí productos y armá el pedido al costado.</div>
+      </div>
+      <span>Precios en vivo · cantidades claras · envío o take away</span>
+    </div>
+
+    <div class="menu-layout">
+      <div>
+        <div class="filters" data-filters aria-label="Categorías"></div>
+
+        <p class="menu-state" data-menu-loading>Calentando el horno…</p>
+        <p class="menu-state" data-menu-error hidden>
+          No pudimos cargar la carta ahora. Escribinos por WhatsApp y te la pasamos.
+        </p>
+        <div class="product-grid" data-product-grid></div>
+      </div>
+
+      <aside class="order-panel" id="pedido" aria-label="Tu pedido">
+        <p class="order-kicker">Pedido en curso</p>
+        <div class="order-title">
+          <strong class="brush">Tu pedido</strong>
+          <span class="order-badge" data-order-badge>0</span>
+        </div>
+
+        <p class="order-empty" data-order-empty>Todavía no agregaste nada. Elegí de la carta 👈</p>
+        <div data-order-lines></div>
+
+        <div class="delivery-row" data-delivery role="group" aria-label="Método de entrega">
+          <button type="button" class="active" data-delivery-option="Take Away">Take Away</button>
+          <button type="button" data-delivery-option="Envío a domicilio">Envío a domicilio</button>
+        </div>
+
+        <label class="field-label" for="cust-name">Datos para coordinar</label>
+        <input class="field" id="cust-name" data-field-name placeholder="Tu nombre" autocomplete="name" />
+        <textarea
+          class="field"
+          data-field-address
+          placeholder="Dirección, esquina o aclaración"
+          hidden></textarea>
+
+        <p class="order-hint">
+          Si elegís envío, la zona y el costo se confirman por chat antes de cerrar el pedido.
+        </p>
+
+        <div class="total">
+          <span>Total estimado</span>
+          <b data-order-total>$0</b>
+        </div>
+
+        <button type="button" class="wa" data-wa-send disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+            ><path
+              d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.5-.7-2.4-1.3-3.4-3-.3-.4.3-.4.7-1.3.1-.2 0-.4 0-.5 0-.1-.6-1.5-.8-2-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.3s1 2.7 1.2 2.8c.1.2 2 3.1 4.9 4.3 1.8.8 2.5.8 3.4.7.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3z"
+            ></path><path
+              d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-2.9.9.9-2.8-.2-.3A8.2 8.2 0 1 1 12 20.2z"
+            ></path></svg
+          >
+          Enviar pedido por WhatsApp
+        </button>
+        <a class="secondary-link" href="#carta">Seguir viendo la carta</a>
+        <p class="confirm-note">No confirma automáticamente. Te respondemos por WhatsApp.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initMenu } from '../scripts/menu'
+  initMenu()
+</script>

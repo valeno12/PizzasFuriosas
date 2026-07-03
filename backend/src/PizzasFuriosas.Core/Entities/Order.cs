@@ -15,8 +15,14 @@ public class Order : BaseEntity
     public decimal DeliveryCost { get; set; } = 0;
     
     public string PaymentMethod { get; set; } = "Efectivo"; // Efectivo, Transferencia
-    
+
     public decimal TotalPrice { get; set; }
+
+    // Aclaraciones del pedido: "sin cebolla", "tocar timbre", etc.
+    public string? Notes { get; set; }
+
+    // Hora prometida de entrega/retiro; null = lo antes posible.
+    public DateTime? ScheduledFor { get; set; }
 
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
 }

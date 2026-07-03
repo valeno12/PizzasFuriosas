@@ -27,6 +27,42 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
             .GreaterThanOrEqualTo(0)
             .WithMessage("El costo de envío no puede ser negativo.");
 
+        RuleFor(x => x.Notes)
+            .MaximumLength(500)
+            .WithMessage("Las notas no pueden superar los 500 caracteres.");
+
+        RuleFor(x => x.Items)
+            .NotEmpty()
+            .WithMessage("El pedido debe contener al menos un producto.");
+
+        RuleForEach(x => x.Items).SetValidator(new CreateOrderItemRequestValidator());
+    }
+}
+
+public class UpdateOrderRequestValidator : AbstractValidator<UpdateOrderRequest>
+{
+    public UpdateOrderRequestValidator()
+    {
+        RuleFor(x => x.ShippingMethod)
+            .Must(s => s == "Take Away" || s == "Delivery")
+            .WithMessage("ShippingMethod debe ser 'Take Away' o 'Delivery'.");
+
+        RuleFor(x => x.PaymentMethod)
+            .Must(p => p == "Efectivo" || p == "Transferencia")
+            .WithMessage("PaymentMethod debe ser 'Efectivo' o 'Transferencia'.");
+
+        RuleFor(x => x)
+            .Must(x => x.ShippingMethod != "Delivery" || (x.AddressId.HasValue || x.NewAddress != null))
+            .WithMessage("Si el método de envío es 'Delivery', debe proporcionar un AddressId o un NewAddress.");
+
+        RuleFor(x => x.DeliveryCost)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("El costo de envío no puede ser negativo.");
+
+        RuleFor(x => x.Notes)
+            .MaximumLength(500)
+            .WithMessage("Las notas no pueden superar los 500 caracteres.");
+
         RuleFor(x => x.Items)
             .NotEmpty()
             .WithMessage("El pedido debe contener al menos un producto.");

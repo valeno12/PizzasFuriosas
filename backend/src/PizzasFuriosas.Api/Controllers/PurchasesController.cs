@@ -16,7 +16,10 @@ public class PurchasesController(AppDbContext context) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? category, [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var query = context.Purchases.AsQueryable();
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var query = context.Purchases.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(category))
             query = query.Where(p => p.Category.ToLower() == category.ToLower());
@@ -44,6 +47,7 @@ public class PurchasesController(AppDbContext context) : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var purchase = await context.Purchases
+            .AsNoTracking()
             .Where(p => p.Id == id)
             .Select(p => new PurchaseResponse(p.Id, p.Date, p.Description, p.Amount, p.Category))
             .FirstOrDefaultAsync();

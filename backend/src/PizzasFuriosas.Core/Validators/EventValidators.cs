@@ -31,6 +31,28 @@ public class CreateEventRequestValidator : AbstractValidator<CreateEventRequest>
     }
 }
 
+public class UpdateEventRequestValidator : AbstractValidator<UpdateEventRequest>
+{
+    public UpdateEventRequestValidator()
+    {
+        RuleFor(x => x.EventDate)
+            .NotEmpty().WithMessage("La fecha del evento es obligatoria.");
+
+        RuleFor(x => x.Location)
+            .NotEmpty().WithMessage("La ubicación es obligatoria.")
+            .MaximumLength(200).WithMessage("La ubicación no puede superar los 200 caracteres.");
+
+        RuleFor(x => x.PizzaCount)
+            .GreaterThanOrEqualTo(0).WithMessage("La cantidad de pizzas no puede ser negativa.");
+
+        RuleFor(x => x.PricePerPizza)
+            .GreaterThanOrEqualTo(0).WithMessage("El precio por pizza no puede ser negativo.");
+
+        RuleFor(x => x.Deposit)
+            .GreaterThanOrEqualTo(0).WithMessage("La seña no puede ser negativa.");
+    }
+}
+
 public class CreateEventSurchargeRequestValidator : AbstractValidator<CreateEventSurchargeRequest>
 {
     public CreateEventSurchargeRequestValidator()

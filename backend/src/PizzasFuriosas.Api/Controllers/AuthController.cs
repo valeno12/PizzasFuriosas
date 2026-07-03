@@ -16,7 +16,7 @@ namespace PizzasFuriosas.Api.Controllers;
 [Route("api/[controller]")]
 public class AuthController(AppDbContext context) : ControllerBase
 {
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest request)
     {

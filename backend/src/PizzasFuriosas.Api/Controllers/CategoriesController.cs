@@ -15,9 +15,10 @@ public class CategoriesController(AppDbContext context) : ControllerBase
 {
     [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<ActionResult<ApiResponse<IEnumerable<CategoryResponse>>>> GetAll()
     {
         var categories = await context.Categories
+            .AsNoTracking()
             .Select(c => new CategoryResponse(c.Id, c.Name))
             .ToListAsync();
 
@@ -26,9 +27,10 @@ public class CategoriesController(AppDbContext context) : ControllerBase
 
     [AllowAnonymous]
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<ActionResult<ApiResponse<CategoryResponse>>> GetById(int id)
     {
         var category = await context.Categories
+            .AsNoTracking()
             .Where(c => c.Id == id)
             .Select(c => new CategoryResponse(c.Id, c.Name))
             .FirstOrDefaultAsync();
@@ -41,7 +43,7 @@ public class CategoriesController(AppDbContext context) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateCategoryRequest request)
+    public async Task<ActionResult<ApiResponse<CategoryResponse>>> Create(CreateCategoryRequest request)
     {
         if (await context.Categories.AnyAsync(c => c.Name.ToLower() == request.Name.ToLower()))
         {
@@ -58,7 +60,7 @@ public class CategoriesController(AppDbContext context) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, UpdateCategoryRequest request)
+    public async Task<ActionResult<ApiResponse<CategoryResponse>>> Update(int id, UpdateCategoryRequest request)
     {
         var category = await context.Categories
             .FirstOrDefaultAsync(c => c.Id == id);
@@ -81,7 +83,7 @@ public class CategoriesController(AppDbContext context) : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<ActionResult<ApiResponse>> Delete(int id)
     {
         var category = await context.Categories
             .FirstOrDefaultAsync(c => c.Id == id);

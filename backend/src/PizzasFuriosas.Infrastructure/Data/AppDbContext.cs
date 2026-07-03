@@ -4,6 +4,10 @@ using PizzasFuriosas.Core.Entities;
 
 public class AppDbContext : DbContext
 {
+    // Fecha fija para los datos seed: usar DateTime.UtcNow acá haría que cada
+    // migración nueva detecte "cambios" y re-actualice las filas seed.
+    private static readonly DateTime SeedDate = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
@@ -64,18 +68,18 @@ public class AppDbContext : DbContext
 
         // --- SEED DATA ---
         modelBuilder.Entity<Category>().HasData(
-            new Category { Id = 1, Name = "Pizzas", CreatedAt = DateTime.UtcNow },
-            new Category { Id = 2, Name = "Papas", CreatedAt = DateTime.UtcNow },
-            new Category { Id = 3, Name = "Postres", CreatedAt = DateTime.UtcNow }
+            new Category { Id = 1, Name = "Pizzas", CreatedAt = SeedDate },
+            new Category { Id = 2, Name = "Papas", CreatedAt = SeedDate },
+            new Category { Id = 3, Name = "Postres", CreatedAt = SeedDate }
         );
 
         modelBuilder.Entity<OrderStatus>().HasData(
-            new OrderStatus { Id = 1, Name = "Pendiente", Description = "Recibido, sin iniciar", CreatedAt = DateTime.UtcNow },
-            new OrderStatus { Id = 2, Name = "En Preparación", Description = "En cocina", CreatedAt = DateTime.UtcNow },
-            new OrderStatus { Id = 3, Name = "Listo", Description = "Esperando retiro o cadete", CreatedAt = DateTime.UtcNow },
-            new OrderStatus { Id = 4, Name = "En Camino", Description = "El cadete lo tiene", CreatedAt = DateTime.UtcNow },
-            new OrderStatus { Id = 5, Name = "Entregado", Description = "Completado", CreatedAt = DateTime.UtcNow },
-            new OrderStatus { Id = 6, Name = "Cancelado", Description = "Cancelado", CreatedAt = DateTime.UtcNow }
+            new OrderStatus { Id = 1, Name = "Pendiente", Description = "Recibido, sin iniciar", CreatedAt = SeedDate },
+            new OrderStatus { Id = 2, Name = "En Preparación", Description = "En cocina", CreatedAt = SeedDate },
+            new OrderStatus { Id = 3, Name = "Listo", Description = "Esperando retiro o cadete", CreatedAt = SeedDate },
+            new OrderStatus { Id = 4, Name = "En Camino", Description = "El cadete lo tiene", CreatedAt = SeedDate },
+            new OrderStatus { Id = 5, Name = "Entregado", Description = "Completado", CreatedAt = SeedDate },
+            new OrderStatus { Id = 6, Name = "Cancelado", Description = "Cancelado", CreatedAt = SeedDate }
         );
     }
 

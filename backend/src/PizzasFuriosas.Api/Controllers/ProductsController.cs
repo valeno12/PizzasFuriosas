@@ -15,11 +15,14 @@ namespace PizzasFuriosas.Api.Controllers;
 [Route("api/[controller]")]
 public class ProductsController(AppDbContext context, IPhotoService photoService) : ControllerBase
 {
-    [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int? categoryId, [FromQuery] bool? isAvailable, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<PaginatedResult<ProductResponse>>>> GetAll([FromQuery] int? categoryId, [FromQuery] bool? isAvailable, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var query = context.Products.AsQueryable();
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var query = context.Products.AsNoTracking().AsQueryable();
 
         if (categoryId.HasValue)
         {
@@ -39,6 +42,7 @@ public class ProductsController(AppDbContext context, IPhotoService photoService
         var totalCount = await query.CountAsync();
 
         var products = await query
+            .OrderBy(p => p.Name) // paginar sin orden estable puede duplicar/saltear ítems entre páginas
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(p => new ProductResponse(
@@ -57,9 +61,10 @@ public class ProductsController(AppDbContext context, IPhotoService photoService
 
     [AllowAnonymous]
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<ActionResult<ApiResponse<ProductResponse>>> GetById(int id)
     {
         var product = await context.Products
+            .AsNoTracking()
             .Where(p => p.Id == id)
             .Select(p => new ProductResponse(
                 p.Id, 
@@ -80,7 +85,7 @@ public class ProductsController(AppDbContext context, IPhotoService photoService
     }
 
     [HttpPost]
-    public async Task <IActionResult> Create (CreateProductRequest request)
+    public async Task<ActionResult<ApiResponse<ProductResponse>>> Create (CreateProductRequest request)
     {
         if (await context.Products.AnyAsync(p => p.Name.ToLower() == request.Name.ToLower()))
         {
@@ -119,7 +124,7 @@ public class ProductsController(AppDbContext context, IPhotoService photoService
     }
 
     [HttpPut("{id}")]
-    public async Task <IActionResult> Update (int id, UpdateProductRequest request)
+    public async Task<ActionResult<ApiResponse<ProductResponse>>> Update(int id, UpdateProductRequest request)
     {
         var product = await context.Products.FirstOrDefaultAsync(p => p.Id == id);
 
@@ -170,6 +175,13 @@ public class ProductsController(AppDbContext context, IPhotoService photoService
             return NotFound(ApiResponse.Error("Producto no encontrado"));
         }
 
+        if (!string.IsNullOrEmpty(product.ImagePublicId))
+        {
+            await photoService.DeletePhotoAsync(product.ImagePublicId);
+            product.ImageUrl = null;
+            product.ImagePublicId = null;
+        }
+
         product.SoftDelete();
         await context.SaveChangesAsync();
         
@@ -200,11 +212,18 @@ public class ProductsController(AppDbContext context, IPhotoService photoService
 
         // 3. Validar extensión y Content-Type para evitar archivos maliciosos (.exe, .pdf, etc)
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        var allowedContentTypes = new[] { "image/jpeg", "image/png", "image/webp" };
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var contentType = file.ContentType.ToLowerInvariant();
         
         if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
         {
             return BadRequest(ApiResponse.Error("Formato no permitido. Solo se aceptan .jpg, .jpeg, .png o .webp"));
+        }
+
+        if (!allowedContentTypes.Contains(contentType))
+        {
+            return BadRequest(ApiResponse.Error("Content-Type no permitido. Solo se aceptan image/jpeg, image/png o image/webp"));
         }
 
         var result = await photoService.UploadPhotoAsync(file.OpenReadStream(), file.FileName);

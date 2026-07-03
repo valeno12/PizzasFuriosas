@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro'
+import Nav from '../components/Nav.astro'
+import Hero from '../components/Hero.astro'
+import Manifesto from '../components/Manifesto.astro'
+import MenuSection from '../components/MenuSection.astro'
+import Gallery from '../components/Gallery.astro'
+import Favorites from '../components/Favorites.astro'
+import Info from '../components/Info.astro'
+import MobileBar from '../components/MobileBar.astro'
+import Footer from '../components/Footer.astro'
+---
+
+<Layout>
+  <Nav />
+  <main id="top">
+    <Hero />
+    <Manifesto />
+    <MenuSection />
+    <Gallery />
+    <Favorites />
+    <Info />
+  </main>
+  <MobileBar />
+  <Footer />
+</Layout>
