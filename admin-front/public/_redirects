@@ -1,0 +1,2 @@
+# SPA fallback: cualquier ruta la maneja el router de Vue (evita 404 al refrescar).
+/*    /index.html   200
