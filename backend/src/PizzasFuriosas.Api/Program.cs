@@ -48,14 +48,36 @@ ValidatorOptions.Global.DisplayNameResolver = (type, member, expression) =>
     return member?.Name;
 };
 
-// Add services to the container.
+// CORS: en desarrollo se permite cualquier origen (cómodo para localhost).
+// En producción se restringe a la landing y el admin de Cloudflare Pages,
+// incluyendo sus preview deployments (ramas), con la forma *.proyecto.pages.dev.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.AllowAnyOrigin() // En producción deberías restringir esto a tu dominio (ej: app.pizzasfuriosas.com)
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            policy.SetIsOriginAllowed(origin =>
+                  {
+                      if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                      {
+                          return false;
+                      }
+
+                      var host = uri.Host;
+                      return host is "pizzasfuriosas.pages.dev" or "pizzasfuriosas-admin.pages.dev"
+                          || host.EndsWith(".pizzasfuriosas.pages.dev")
+                          || host.EndsWith(".pizzasfuriosas-admin.pages.dev");
+                  })
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
 });
 
