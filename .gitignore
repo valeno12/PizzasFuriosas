@@ -5,6 +5,14 @@ obj/
 *.db-shm
 *.db-wal
 
+## Node / frontend
+node_modules/
+dist/
+.astro/
+*.tsbuildinfo
+*.log
+*.local
+
 ## IDE
 .vs/
 .vscode/
@@ -16,6 +24,9 @@ obj/
 Thumbs.db
 
 ## Secrets
+.env
+.env.*
+!.env.example
 appsettings.*.json
 !appsettings.json
 !appsettings.Development.json

@@ -11,9 +11,21 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Cargar variables de entorno desde el archivo .env
+// Cargar variables de entorno desde el archivo .env (solo en local; en producción
+// las variables las inyecta el hosting, así que el archivo puede no existir).
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env");
-DotNetEnv.Env.Load(envPath);
+if (File.Exists(envPath))
+{
+    DotNetEnv.Env.Load(envPath);
+}
+
+// Hostings como Render/Fly asignan el puerto por la variable PORT. En local no está
+// definida, así que se respeta la config de launchSettings (puerto de desarrollo).
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // Configurar FluentValidation con mensajes globales en español
 ValidatorOptions.Global.LanguageManager = new SpanishLanguageManager();
@@ -158,6 +170,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Endpoint raíz simple para el health check del hosting (Render espera un 200 en "/").
+app.MapGet("/", () => Results.Ok(new { status = "ok", service = "PizzasFuriosas.Api" }));
 
 // Inicialización de la base de datos
 using (var scope = app.Services.CreateScope())

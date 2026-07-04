@@ -1,0 +1,10 @@
+# Evita mandar basura al contexto de build (más rápido y liviano)
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+.env
+*.user
+Dockerfile
+.dockerignore
+README*.md
