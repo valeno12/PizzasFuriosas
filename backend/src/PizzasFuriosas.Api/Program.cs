@@ -48,38 +48,59 @@ ValidatorOptions.Global.DisplayNameResolver = (type, member, expression) =>
     return member?.Name;
 };
 
-// CORS: en desarrollo se permite cualquier origen (cómodo para localhost).
-// En producción se restringe a la landing y el admin de Cloudflare Pages,
-// incluyendo sus preview deployments (ramas), con la forma *.proyecto.pages.dev.
+// CORS: en desarrollo se permiten los origenes locales configurados.
+// En produccion los dominios permitidos deben venir de configuracion/variables de entorno.
+var allowedCorsOrigins = GetAllowedCorsOrigins(builder.Configuration, builder.Environment);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        }
-        else
-        {
-            policy.SetIsOriginAllowed(origin =>
-                  {
-                      if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
-                      {
-                          return false;
-                      }
-
-                      var host = uri.Host;
-                      return host is "pizzasfuriosas.pages.dev" or "pizzasfuriosas-admin.pages.dev"
-                          || host.EndsWith(".pizzasfuriosas.pages.dev")
-                          || host.EndsWith(".pizzasfuriosas-admin.pages.dev");
-                  })
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        }
+        policy.WithOrigins(allowedCorsOrigins)
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
+
+static string[] GetAllowedCorsOrigins(IConfiguration configuration, IWebHostEnvironment environment)
+{
+    var configuredOrigins = configuration
+        .GetSection("Cors:AllowedOrigins")
+        .GetChildren()
+        .Select(origin => origin.Value)
+        .Where(origin => !string.IsNullOrWhiteSpace(origin));
+
+    var environmentOrigins = (Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS") ?? string.Empty)
+        .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    var origins = configuredOrigins
+        .Concat(environmentOrigins)
+        .Select(origin => origin!.Trim().TrimEnd('/'))
+        .Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    if (origins.Length > 0)
+    {
+        return origins;
+    }
+
+    if (environment.IsDevelopment())
+    {
+        return
+        [
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:4321",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
+            "http://127.0.0.1:4321"
+        ];
+    }
+
+    throw new InvalidOperationException(
+        "Falta configurar CORS_ALLOWED_ORIGINS o Cors:AllowedOrigins con los dominios permitidos para el frontend.");
+}
 
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
