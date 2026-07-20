@@ -1,8 +1,8 @@
 # 🍕 Pizzas Furiosas
 
-Plataforma web para una pizzería real de Paraná (Entre Ríos): una **landing** donde el cliente arma su pedido y lo cierra por WhatsApp, un **panel de administración** para gestionar el negocio, y una **API** que sostiene todo.
+Plataforma web para una pizzería real: una **landing** donde el cliente arma su pedido y lo cierra por WhatsApp, un **panel de administración** para gestionar el negocio, y una **API** que sostiene todo.
 
-Proyecto full-stack de punta a punta — desde el modelado de datos y la API hasta el deploy en la nube — construido y desplegado para uso real.
+Proyecto full-stack de punta a punta - desde el modelado de datos y la API hasta el deploy en la nube - construido y desplegado para uso real.
 
 > 🔗 **Demo:** _landing en producción_ · **Estado:** en producción y en mejora continua.
 
@@ -38,22 +38,27 @@ Separado en capas para mantener el dominio independiente de la infraestructura:
 
 ```
 backend/src/
-├── PizzasFuriosas.Core            → entidades, interfaces, validadores (dominio)
-├── PizzasFuriosas.Infrastructure  → EF Core, migraciones, servicios (Cloudinary, etc.)
-└── PizzasFuriosas.Api             → controllers, configuración, endpoints
+├── PizzasFuriosas.Core            -> entidades, interfaces, validadores (dominio)
+├── PizzasFuriosas.Infrastructure  -> EF Core, migraciones, servicios (Cloudinary, etc.)
+└── PizzasFuriosas.Api             -> controllers finos, services de negocio, configuración
 ```
 
+- **Controllers finos -> services de negocio:** la lógica vive en los services; los controllers solo traducen HTTP.
+- **Errores centralizados:** excepciones de dominio traducidas a códigos HTTP en un único middleware.
 - Migraciones que se aplican solas al arrancar (ideal para hosting sin consola).
-- Configuración por variables de entorno (nada de secretos en el repo).
+- Configuración por variables de entorno.
 - Respuestas de API uniformes y validación con mensajes en español.
+- Tests de integración con Testcontainers (PostgreSQL real).
+
+> 📖 Arquitectura, patrones y decisiones de diseño en detalle: **[backend/README.md](backend/README.md)**.
 
 ## 📂 Estructura del repo
 
 ```
-├── backend/         → API .NET
-├── admin-front/     → panel de administración (Vue)
-├── front-landing/   → landing pública (Astro)
-└── docker-compose.yml → Postgres para desarrollo local
+├── backend/         -> API .NET
+├── admin-front/     -> panel de administración (Vue)
+├── front-landing/   -> landing pública (Astro)
+└── docker-compose.yml -> Postgres para desarrollo local
 ```
 
 ---
@@ -67,7 +72,7 @@ backend/src/
 docker compose up -d        # levanta Postgres local
 ```
 
-**2. Backend** — crear `backend/.env` (ver `backend/.env.example`) y:
+**2. Backend** - crear `backend/.env` (ver `backend/.env.example`) y:
 ```bash
 cd backend/src/PizzasFuriosas.Api
 dotnet run                  # API en http://localhost:5054
@@ -84,15 +89,6 @@ npm install && npm run dev
 cd admin-front
 npm install && npm run dev
 ```
-
----
-
-## 🗺️ Roadmap
-
-Proyecto vivo, en mejora continua. Próximos focos:
-- Reforzar buenas prácticas y arquitectura del backend.
-- Tests automatizados.
-- Refinamientos de UX en el panel.
 
 ---
 

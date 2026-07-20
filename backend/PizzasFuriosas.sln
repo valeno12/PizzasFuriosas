@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PizzasFuriosas.Core", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PizzasFuriosas.Infrastructure", "src\PizzasFuriosas.Infrastructure\PizzasFuriosas.Infrastructure.csproj", "{4F696884-7AFB-4DEF-9C1F-14B48B0623D1}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{E41729BE-96DE-4019-BAE1-1915239F9E21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PizzasFuriosas.Api.Tests", "tests\PizzasFuriosas.Api.Tests\PizzasFuriosas.Api.Tests.csproj", "{C14548C9-A833-4F15-A391-078489C287FD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,10 +36,15 @@ Global
 		{4F696884-7AFB-4DEF-9C1F-14B48B0623D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F696884-7AFB-4DEF-9C1F-14B48B0623D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F696884-7AFB-4DEF-9C1F-14B48B0623D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C14548C9-A833-4F15-A391-078489C287FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C14548C9-A833-4F15-A391-078489C287FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C14548C9-A833-4F15-A391-078489C287FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C14548C9-A833-4F15-A391-078489C287FD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C355E0EE-61CE-4B1D-AEB6-AA28E208B43A} = {4A8FA57C-BDED-448A-A8E6-E2055C659F1F}
 		{6C28277C-C84E-4CE9-BA08-186F53C9F7B3} = {4A8FA57C-BDED-448A-A8E6-E2055C659F1F}
 		{4F696884-7AFB-4DEF-9C1F-14B48B0623D1} = {4A8FA57C-BDED-448A-A8E6-E2055C659F1F}
+		{C14548C9-A833-4F15-A391-078489C287FD} = {E41729BE-96DE-4019-BAE1-1915239F9E21}
 	EndGlobalSection
 EndGlobal

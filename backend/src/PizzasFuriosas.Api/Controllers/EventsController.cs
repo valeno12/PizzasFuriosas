@@ -1,226 +1,67 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using PizzasFuriosas.Api.Services;
 using PizzasFuriosas.Core.Common;
 using PizzasFuriosas.Core.DTOs;
-using PizzasFuriosas.Core.Entities;
-using PizzasFuriosas.Infrastructure.Data;
 
 namespace PizzasFuriosas.Api.Controllers;
 
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class EventsController(AppDbContext context) : ControllerBase
+public class EventsController(EventService eventService) : ControllerBase
 {
-    private string CalculateStatus(DateTime eventDate, DateTime? cancelledAt, DateTime? completedAt)
-    {
-        if (cancelledAt.HasValue) return "Cancelado";
-        if (completedAt.HasValue) return "Completado";
-        if (eventDate > DateTime.UtcNow) return "Próximo";
-        return "Pendiente de cierre";
-    }
-
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<ActionResult<ApiResponse<PaginatedResult<EventResponse>>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
     {
-        page = Math.Max(page, 1);
-        pageSize = Math.Clamp(pageSize, 1, 100);
-
-        var query = context.Events
-            .AsNoTracking()
-            .Include(e => e.Customer)
-            .Include(e => e.Surcharges)
-            .Include(e => e.Payments)
-            .AsQueryable();
-
-        var totalCount = await query.CountAsync();
-
-        var events = await query
-            .OrderByDescending(e => e.EventDate)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-
-        var responseList = events.Select(e =>
-        {
-            var totalSurcharges = e.Surcharges.Sum(s => s.Amount);
-            var totalPayments = e.Payments.Sum(p => p.Amount);
-            var totalCost = (e.PizzaCount * e.PricePerPizza) + totalSurcharges;
-            
-            return new EventResponse(
-                e.Id,
-                e.CustomerId,
-                e.Customer?.Name ?? "Cliente Borrado",
-                e.EventDate,
-                e.Location,
-                e.Notes,
-                e.PizzaCount,
-                e.PricePerPizza,
-                e.Deposit,
-                totalCost,
-                totalCost - e.Deposit - totalPayments,
-                CalculateStatus(e.EventDate, e.CancelledAt, e.CompletedAt),
-                e.CancelledAt,
-                e.CompletedAt,
-                e.Surcharges.Select(s => new EventSurchargeResponse(s.Id, s.Description, s.Amount)).ToList(),
-                e.Payments.Select(p => new EventPaymentResponse(p.Id, p.PaymentMethod, p.Amount)).ToList()
-            );
-        }).ToList();
-
-        var paginatedResult = new PaginatedResult<EventResponse>(responseList, totalCount, page, pageSize);
-        return Ok(new ApiResponse<PaginatedResult<EventResponse>>(paginatedResult));
+        var result = await eventService.GetAllAsync(page, pageSize, cancellationToken);
+        return Ok(new ApiResponse<PaginatedResult<EventResponse>>(result));
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<ActionResult<ApiResponse<EventResponse>>> GetById(int id, CancellationToken cancellationToken)
     {
-        var e = await context.Events
-            .AsNoTracking()
-            .Include(ev => ev.Customer)
-            .Include(ev => ev.Surcharges)
-            .Include(ev => ev.Payments)
-            .FirstOrDefaultAsync(ev => ev.Id == id);
-
-        if (e == null) return NotFound(ApiResponse.Error("Evento no encontrado"));
-
-        var totalSurcharges = e.Surcharges.Sum(s => s.Amount);
-        var totalPayments = e.Payments.Sum(p => p.Amount);
-        var totalCost = (e.PizzaCount * e.PricePerPizza) + totalSurcharges;
-
-        var response = new EventResponse(
-            e.Id,
-            e.CustomerId,
-            e.Customer?.Name ?? "Cliente Borrado",
-            e.EventDate,
-            e.Location,
-            e.Notes,
-            e.PizzaCount,
-            e.PricePerPizza,
-            e.Deposit,
-            totalCost,
-            totalCost - e.Deposit - totalPayments,
-            CalculateStatus(e.EventDate, e.CancelledAt, e.CompletedAt),
-            e.CancelledAt,
-            e.CompletedAt,
-            e.Surcharges.Select(s => new EventSurchargeResponse(s.Id, s.Description, s.Amount)).ToList(),
-            e.Payments.Select(p => new EventPaymentResponse(p.Id, p.PaymentMethod, p.Amount)).ToList()
-        );
-
-        return Ok(new ApiResponse<EventResponse>(response));
+        var ev = await eventService.GetByIdAsync(id, cancellationToken);
+        return Ok(new ApiResponse<EventResponse>(ev));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateEventRequest request)
+    [Authorize(Policy = AppPolicies.AdminOnly)]
+    public async Task<ActionResult<ApiResponse<int>>> Create(CreateEventRequest request, CancellationToken cancellationToken)
     {
-        var customerExists = await context.Customers.AnyAsync(c => c.Id == request.CustomerId);
-        if (!customerExists) return NotFound(ApiResponse.Error("Cliente no encontrado"));
-
-        var newEvent = new Event
-        {
-            CustomerId = request.CustomerId,
-            EventDate = request.EventDate,
-            Location = request.Location,
-            Notes = request.Notes,
-            PizzaCount = request.PizzaCount,
-            PricePerPizza = request.PricePerPizza,
-            Deposit = request.Deposit,
-            Surcharges = request.Surcharges.Select(s => new EventSurcharge
-            {
-                Description = s.Description,
-                Amount = s.Amount
-            }).ToList(),
-            Payments = request.Payments.Select(p => new EventPayment
-            {
-                PaymentMethod = p.PaymentMethod,
-                Amount = p.Amount
-            }).ToList()
-        };
-
-        context.Events.Add(newEvent);
-        await context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = newEvent.Id }, new ApiResponse<int>(newEvent.Id, "Evento creado exitosamente"));
+        var id = await eventService.CreateAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<int>(id, "Evento creado exitosamente"));
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, UpdateEventRequest request)
+    [Authorize(Policy = AppPolicies.AdminOnly)]
+    public async Task<ActionResult<ApiResponse>> Update(int id, UpdateEventRequest request, CancellationToken cancellationToken)
     {
-        var e = await context.Events.FirstOrDefaultAsync(ev => ev.Id == id);
-        if (e == null) return NotFound(ApiResponse.Error("Evento no encontrado"));
-
-        if (e.CancelledAt.HasValue || e.CompletedAt.HasValue)
-            return Conflict(ApiResponse.Error("Un evento cerrado no se puede editar"));
-
-        e.EventDate = request.EventDate;
-        e.Location = request.Location;
-        e.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
-        e.PizzaCount = request.PizzaCount;
-        e.PricePerPizza = request.PricePerPizza;
-        e.Deposit = request.Deposit;
-
-        await context.SaveChangesAsync();
+        await eventService.UpdateAsync(id, request, cancellationToken);
         return Ok(ApiResponse.Ok("Evento actualizado"));
     }
 
     [HttpPut("{id}/complete")]
-    public async Task<IActionResult> Complete(int id, CompleteEventRequest request)
+    [Authorize(Policy = AppPolicies.AdminOnly)]
+    public async Task<ActionResult<ApiResponse>> Complete(int id, CompleteEventRequest request, CancellationToken cancellationToken)
     {
-        var e = await context.Events.FirstOrDefaultAsync(ev => ev.Id == id);
-        if (e == null) return NotFound(ApiResponse.Error("Evento no encontrado"));
-        
-        if (e.CancelledAt.HasValue) return Conflict(ApiResponse.Error("El evento ya fue cancelado"));
-        if (e.CompletedAt.HasValue) return Conflict(ApiResponse.Error("El evento ya fue completado"));
-
-        e.CompletedAt = DateTime.UtcNow;
-        e.PizzaCount += request.ExtraPizzas;
-
-        foreach (var sur in request.ExtraSurcharges)
-        {
-            context.EventSurcharges.Add(new EventSurcharge
-            {
-                EventId = id,
-                Description = sur.Description,
-                Amount = sur.Amount
-            });
-        }
-
-        await context.SaveChangesAsync();
+        await eventService.CompleteAsync(id, request, cancellationToken);
         return Ok(ApiResponse.Ok("Evento marcado como completado"));
     }
 
     [HttpPut("{id}/cancel")]
-    public async Task<IActionResult> Cancel(int id)
+    [Authorize(Policy = AppPolicies.AdminOnly)]
+    public async Task<ActionResult<ApiResponse>> Cancel(int id, CancellationToken cancellationToken)
     {
-        var e = await context.Events.FirstOrDefaultAsync(ev => ev.Id == id);
-        if (e == null) return NotFound(ApiResponse.Error("Evento no encontrado"));
-
-        if (e.CancelledAt.HasValue) return Conflict(ApiResponse.Error("El evento ya fue cancelado"));
-        if (e.CompletedAt.HasValue) return Conflict(ApiResponse.Error("El evento ya fue completado"));
-
-        e.CancelledAt = DateTime.UtcNow;
-        
-        await context.SaveChangesAsync();
+        await eventService.CancelAsync(id, cancellationToken);
         return Ok(ApiResponse.Ok("Evento cancelado"));
     }
 
     [HttpPost("{id}/payments")]
-    public async Task<IActionResult> AddPayment(int id, CreateEventPaymentRequest request)
+    [Authorize(Policy = AppPolicies.AdminOnly)]
+    public async Task<ActionResult<ApiResponse>> AddPayment(int id, CreateEventPaymentRequest request, CancellationToken cancellationToken)
     {
-        var e = await context.Events.FirstOrDefaultAsync(ev => ev.Id == id);
-        if (e == null) return NotFound(ApiResponse.Error("Evento no encontrado"));
-
-        // Se permiten pagos sobre eventos completados (cobrar saldo), pero no sobre cancelados.
-        if (e.CancelledAt.HasValue) return Conflict(ApiResponse.Error("El evento está cancelado; no admite pagos"));
-
-        context.EventPayments.Add(new EventPayment
-        {
-            EventId = id,
-            PaymentMethod = request.PaymentMethod,
-            Amount = request.Amount
-        });
-
-        await context.SaveChangesAsync();
+        await eventService.AddPaymentAsync(id, request, cancellationToken);
         return Ok(ApiResponse.Ok("Pago registrado exitosamente"));
     }
 }

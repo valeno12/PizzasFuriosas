@@ -1,4 +1,5 @@
 using FluentValidation;
+using PizzasFuriosas.Core.Common;
 using PizzasFuriosas.Core.DTOs;
 
 namespace PizzasFuriosas.Core.Validators;
@@ -23,8 +24,8 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .MaximumLength(100);
 
         RuleFor(x => x.Role)
-            .Must(r => r == "Admin" || r == "Employee")
-            .WithMessage("El rol debe ser 'Admin' o 'Employee'.");
+            .Must(r => r == AppRoles.Admin || r == AppRoles.Employee)
+            .WithMessage($"El rol debe ser '{AppRoles.Admin}' o '{AppRoles.Employee}'.");
     }
 }
 
