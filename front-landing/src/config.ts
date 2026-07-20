@@ -15,3 +15,8 @@ export const BUSINESS = {
   phoneDisplay: import.meta.env.PUBLIC_PHONE_DISPLAY ?? DEFAULT_PHONE_DISPLAY,
   instagram: '@pizza_furiosa',
 }
+
+// Consulta de eventos por WhatsApp, con mensaje pre-armado.
+export const EVENT_WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
+  `¡Hola ${BUSINESS.name}! 🍕 Quería información sobre eventos.`,
+)}`

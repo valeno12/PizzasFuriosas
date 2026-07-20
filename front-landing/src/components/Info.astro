@@ -1,5 +1,5 @@
 ---
-import { BUSINESS } from '../config'
+import { BUSINESS, EVENT_WHATSAPP_URL } from '../config'
 ---
 
 <section class="info" id="horarios">
@@ -38,7 +38,7 @@ import { BUSINESS } from '../config'
       <img class="photo" src="/images/IMG_20260616_130329.webp" alt="Pizzas a la piedra saliendo del horno a la llama" loading="lazy" />
       <p class="brush title">¿Tenés un evento?</p>
       <p>Llevamos las pizzas a donde estés. Escribinos al {BUSINESS.phoneDisplay}.</p>
-      <a class="event-cta" href="#horarios">Consultar evento</a>
+      <a class="event-cta" href={EVENT_WHATSAPP_URL} target="_blank" rel="noopener">Consultar evento</a>
     </div>
   </div>
 </section>
