@@ -82,7 +82,10 @@ const cartCount = () => [...cart.values()].reduce((a, b) => a + b, 0)
 
 function renderFilters(categories: Category[]) {
   if (!el.filters) return
-  const tabs = [{ id: null as number | null, name: 'Todas' }, ...categories]
+  // Solo mostramos categorías que tengan al menos un producto disponible cargado.
+  const usedCategoryIds = new Set(products.map((p) => p.categoryId))
+  const visibleCategories = categories.filter((c) => usedCategoryIds.has(c.id))
+  const tabs = [{ id: null as number | null, name: 'Todas' }, ...visibleCategories]
   el.filters.innerHTML = ''
   for (const tab of tabs) {
     const btn = document.createElement('button')
@@ -128,11 +131,6 @@ function renderGrid() {
     meta.innerHTML = `<h3></h3><span class="price">${money.format(p.price)}</span>`
     meta.querySelector('h3')!.textContent = p.name
     card.appendChild(meta)
-
-    const cat = document.createElement('p')
-    cat.className = 'product-cat'
-    cat.textContent = p.categoryName
-    card.appendChild(cat)
 
     if (qty > 0) {
       const row = document.createElement('div')
