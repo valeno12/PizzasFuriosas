@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore backend/PizzasFuriosas.sln
+
+      - name: Build
+        run: dotnet build backend/PizzasFuriosas.sln --no-restore --configuration Release
+
+      # Los tests de Orders usan Testcontainers (Postgres real vía Docker),
+      # disponible en los runners de ubuntu-latest.
+      - name: Test
+        run: dotnet test backend/PizzasFuriosas.sln --no-build --configuration Release --verbosity normal
