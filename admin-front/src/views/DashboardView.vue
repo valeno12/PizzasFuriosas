@@ -155,7 +155,7 @@ function splitPercent(a, b) {
           <!-- Columna principal: rankings -->
           <div class="grid gap-4">
             <div>
-              <div class="section-label"><span>Pizzas más vendidas</span></div>
+              <div class="section-label"><span>Productos más vendidos (incluye promos)</span></div>
               <p v-if="stats.topProducts.length === 0" class="py-4 text-center text-sm text-muted">
                 Sin ventas en este período.
               </p>
@@ -187,6 +187,15 @@ function splitPercent(a, b) {
             </div>
 
             <div>
+              <div v-if="stats.topPromotions?.length" class="mb-4">
+                <div class="section-label"><span>Promos más vendidas</span></div>
+                <div class="list-panel">
+                  <div v-for="promo in stats.topPromotions" :key="promo.productId" class="list-row">
+                    <strong>{{ promo.productName }}</strong>
+                    <span>{{ formatNumber(promo.totalQuantitySold) }} u.</span>
+                  </div>
+                </div>
+              </div>
               <div class="section-label"><span>Mejores clientes</span></div>
               <p v-if="stats.topCustomers.length === 0" class="py-4 text-center text-sm text-muted">
                 Sin clientes en este período.

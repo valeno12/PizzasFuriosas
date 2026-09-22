@@ -187,7 +187,7 @@ public static class ServiceCollectionExtensions
         var userInfo = uri.UserInfo.Split(':', 2);
         var database = uri.AbsolutePath.TrimStart('/');
         var port = uri.Port > 0 ? uri.Port : 5432;
-        var sslMode = uri.Host is "" or "127.0.0.1" ? "Disable" : "Require";
+        var sslMode = uri.IsLoopback ? "Disable" : "Require";
 
         return $"Host={uri.Host};Port={port};Database={database};Username={Uri.UnescapeDataString(userInfo[0])};" +
                $"Password={Uri.UnescapeDataString(userInfo.Length > 1 ? userInfo[1] : "")};SSL Mode={sslMode}";

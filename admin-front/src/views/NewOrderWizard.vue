@@ -115,12 +115,20 @@ async function loadOrderForEditing() {
         item.productId,
         {
           // Si el producto sigue existiendo se usa el actual; si no, uno mínimo con el precio pagado.
-          product: products.value.find((p) => p.id === item.productId) || {
-            id: item.productId,
-            name: item.name,
-            price: item.unitPrice,
-            imageUrl: null,
-          },
+          product: item.components?.length
+            ? {
+                id: item.productId,
+                name: item.name,
+                price: item.unitPrice,
+                components: item.components,
+                freeDelivery: item.freeDelivery,
+              }
+            : products.value.find((p) => p.id === item.productId) || {
+                id: item.productId,
+                name: item.name,
+                price: item.unitPrice,
+                imageUrl: null,
+              },
           quantity: item.quantity,
         },
       ]),
@@ -185,11 +193,13 @@ const itemsTotal = computed(() =>
 const selectedItemsCount = computed(() =>
   selectedProducts.value.reduce((sum, e) => sum + e.quantity, 0),
 )
-const orderTotal = computed(
-  () =>
-    itemsTotal.value +
-    (delivery.value.shippingMethod === 'Delivery' ? Number(delivery.value.deliveryCost || 0) : 0),
+const hasFreeDelivery = computed(() => selectedProducts.value.some((e) => e.product.freeDelivery))
+const chargedDelivery = computed(() =>
+  delivery.value.shippingMethod === 'Delivery' && !hasFreeDelivery.value
+    ? Number(delivery.value.deliveryCost || 0)
+    : 0,
 )
+const orderTotal = computed(() => itemsTotal.value + chargedDelivery.value)
 const customerNameForReview = computed(() => {
   if (isEditing) return editingOrder.value?.customerName
   return customerMode.value === 'existing' ? selectedCustomer.value?.name : newCustomer.value.name
@@ -324,7 +334,23 @@ function setQuantity(product, quantity) {
   const parsed = Math.max(0, Number(quantity || 0))
   const next = { ...cart.value }
   if (parsed === 0) delete next[product.id]
-  else next[product.id] = { product, quantity: parsed }
+  else {
+    const snapshot = editingOrder.value?.items.find(
+      (i) => i.productId === product.id && i.components?.length,
+    )
+    next[product.id] = {
+      product: snapshot
+        ? {
+            ...product,
+            name: snapshot.name,
+            price: snapshot.unitPrice,
+            components: snapshot.components,
+            freeDelivery: snapshot.freeDelivery,
+          }
+        : product,
+      quantity: parsed,
+    }
+  }
   cart.value = next
 }
 
@@ -396,7 +422,7 @@ function buildPayload() {
           }
         : null,
     shippingMethod: delivery.value.shippingMethod,
-    deliveryCost: isDelivery ? Number(delivery.value.deliveryCost || 0) : 0,
+    deliveryCost: chargedDelivery.value,
     paymentMethod: delivery.value.paymentMethod,
     notes: orderNotes.value.trim() || null,
     scheduledFor: scheduledForIso(),
@@ -685,6 +711,8 @@ const modeTabClass = (active) => [
             v-if="delivery.shippingMethod === 'Delivery'"
             v-model="delivery.deliveryCost"
             label="Costo de envío"
+            :disabled="hasFreeDelivery"
+            :helper="hasFreeDelivery ? 'Bonificado por la promo seleccionada.' : ''"
             type="number"
             inputmode="numeric"
             min="0"
@@ -807,6 +835,14 @@ const modeTabClass = (active) => [
                 </div>
                 <div class="min-w-0">
                   <div class="truncate text-[0.9rem] font-bold">{{ product.name }}</div>
+                  <p v-if="product.components?.length" class="text-xs text-muted">
+                    {{
+                      product.components.map((c) => `${c.quantity}× ${c.productName}`).join(' + ')
+                    }}
+                  </p>
+                  <p v-if="product.freeDelivery" class="text-xs font-bold text-primary">
+                    Envío gratis
+                  </p>
                   <div class="mt-0.5 text-[0.82rem] font-bold text-primary">
                     {{ formatMoney(product.price) }}
                   </div>
@@ -891,13 +927,18 @@ const modeTabClass = (active) => [
             <div v-for="entry in selectedProducts" :key="entry.product.id" class="list-row">
               <span>
                 <strong>{{ entry.quantity }}x {{ entry.product.name }}</strong>
+                <span v-if="entry.product.components?.length" class="list-row-meta">{{
+                  entry.product.components
+                    .map((c) => `${c.quantity * entry.quantity}× ${c.productName}`)
+                    .join(' + ')
+                }}</span>
                 <span class="list-row-meta">{{ formatMoney(entry.product.price) }} c/u</span>
               </span>
               <strong>{{ formatMoney(entry.product.price * entry.quantity) }}</strong>
             </div>
             <div v-if="delivery.shippingMethod === 'Delivery'" class="list-row">
               <span class="text-muted">Envío</span>
-              <span>{{ formatMoney(delivery.deliveryCost) }}</span>
+              <span>{{ hasFreeDelivery ? 'Gratis por promo' : formatMoney(chargedDelivery) }}</span>
             </div>
           </div>
         </section>

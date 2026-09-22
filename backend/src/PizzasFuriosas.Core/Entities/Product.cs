@@ -19,6 +19,9 @@ public class Product : BaseEntity
 
     public Category Category { get; set; } = null!;
 
+    public bool FreeDelivery { get; set; }
+    public ICollection<ProductComponent> Components { get; set; } = new List<ProductComponent>();
+
     public string? ImageUrl { get; set; }
     public string? ImagePublicId { get; set; }
 }

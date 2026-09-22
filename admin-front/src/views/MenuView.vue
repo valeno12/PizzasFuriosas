@@ -268,6 +268,12 @@ async function createNewCategory(name) {
           >
             <span class="min-w-0">
               <strong class="block truncate text-[0.94rem] leading-tight">{{ item.name }}</strong>
+              <span v-if="item.components?.length" class="text-xs font-bold text-primary"
+                >Promo{{ item.freeDelivery ? ' · Envío gratis' : '' }}</span
+              >
+              <span v-if="item.components?.length" class="block text-xs text-muted">{{
+                item.components.map((c) => `${c.quantity}× ${c.productName}`).join(' + ')
+              }}</span>
               <small class="mt-0.5 block text-xs text-muted">{{ item.category }}</small>
               <span class="mt-0.5 block font-black text-primary">{{
                 formatMoney(item.price)

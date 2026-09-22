@@ -10,6 +10,10 @@ public class OrderItem : BaseEntity
     public int ProductId { get; set; }
     public Product Product { get; set; } = null!;
 
+    public string? ProductNameSnapshot { get; set; }
+    public bool FreeDelivery { get; set; }
+    public ICollection<OrderItemComponent> Components { get; set; } = new List<OrderItemComponent>();
+
     public int Quantity { get; set; }
 
     [Column(TypeName = "decimal(10,2)")]

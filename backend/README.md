@@ -152,3 +152,7 @@ dotnet test          # requiere Docker corriendo
 - **Validación:** FluentValidation, con mensajes en español, se ejecuta automáticamente en cada request.
 - **Paginación:** los listados devuelven `PaginatedResult<T>` (items + total + página).
 - **Secretos:** solo por variables de entorno, nunca en el repo (ver `.env.example`).
+
+## Promociones
+
+Ver [configuración, compatibilidad y despliegue de promos](docs/promociones.md).

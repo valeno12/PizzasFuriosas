@@ -18,6 +18,8 @@ function mapProduct(p) {
     price: p.price,
     isAvailable: p.isAvailable,
     image: p.imageUrl || null,
+    components: p.components || [],
+    freeDelivery: p.freeDelivery || false,
   }
 }
 
@@ -106,6 +108,8 @@ export const useMenuStore = defineStore('menu', () => {
         price: Number(payload.price),
         categoryId: Number(payload.categoryId),
         isAvailable: true,
+        components: payload.components,
+        freeDelivery: payload.freeDelivery,
       })
       items.value.unshift(mapProduct(product))
       totalCount.value += 1
@@ -129,6 +133,8 @@ export const useMenuStore = defineStore('menu', () => {
         price: Number(payload.price),
         categoryId: Number(payload.categoryId),
         isAvailable: payload.isAvailable,
+        components: payload.components,
+        freeDelivery: payload.freeDelivery,
       })
       const index = items.value.findIndex((i) => i.id === id)
       if (index !== -1) items.value[index] = mapProduct(product)

@@ -17,7 +17,8 @@ public record CreateOrderRequest(
     List<CreateOrderItemRequest> Items
 );
 
-public record OrderItemResponse(int Id, int ProductId, string ProductName, int Quantity, decimal UnitPrice, decimal Subtotal);
+public record OrderItemResponse(int Id, int ProductId, string ProductName, int Quantity, decimal UnitPrice, decimal Subtotal,
+    List<ProductComponentResponse>? Components = null, bool FreeDelivery = false);
 
 public record OrderAddressResponse(int Id, string Street, string Number, string? Apartment, string? Notes);
 

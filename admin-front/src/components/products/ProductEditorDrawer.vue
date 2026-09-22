@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import Cropper from 'cropperjs'
+import { getProducts } from '../../services/productsService'
 import 'cropperjs/dist/cropper.css'
 import AppDrawer from '../ui/AppDrawer.vue'
 import UiButton from '../ui/UiButton.vue'
@@ -18,6 +19,34 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save', 'create-category'])
 
 const form = ref({ name: '', price: '', categoryId: '', isAvailable: true })
+const isPromotion = ref(false)
+const componentProducts = ref([])
+const loadingComponents = ref(false)
+const componentLoadError = ref('')
+const componentOptions = computed(() =>
+  componentProducts.value
+    .filter((p) => p.id !== props.product?.id && !p.components?.length)
+    .map((p) => ({ value: p.id, label: p.name })),
+)
+async function loadComponentProducts() {
+  loadingComponents.value = true
+  componentLoadError.value = ''
+  try {
+    const all = []
+    let page = 1
+    let data
+    do {
+      data = await getProducts({ page, pageSize: 100 })
+      all.push(...data.items)
+      page++
+    } while (page <= data.totalPages)
+    componentProducts.value = all
+  } catch {
+    componentLoadError.value = 'No se pudieron cargar los productos para la promo.'
+  } finally {
+    loadingComponents.value = false
+  }
+}
 const imageFile = ref(null)
 const previewUrl = ref('')
 const localError = ref('')
@@ -43,6 +72,8 @@ watch(
       return
     }
     localError.value = ''
+    isPromotion.value = Boolean(props.product?.components?.length)
+    loadComponentProducts()
     imageFile.value = null
     previewUrl.value = props.product?.image || ''
     isCropping.value = false
@@ -52,12 +83,19 @@ watch(
           price: props.product.price || '',
           categoryId: props.product.categoryId || '',
           isAvailable: props.product.isAvailable !== false,
+          components: (props.product.components || []).map((c) => ({
+            productId: c.productId,
+            quantity: c.quantity,
+          })),
+          freeDelivery: props.product.freeDelivery || false,
         }
       : {
           name: '',
           price: '',
           categoryId: props.categories[0]?.id || '',
           isAvailable: true,
+          components: [],
+          freeDelivery: false,
         }
   },
 )
@@ -137,12 +175,35 @@ function submit() {
     localError.value = 'Completá nombre, precio mayor a cero y categoría.'
     return
   }
+  if (
+    isPromotion.value &&
+    (!form.value.components.length ||
+      form.value.components.some(
+        (c) =>
+          !c.productId ||
+          !Number.isInteger(Number(c.quantity)) ||
+          Number(c.quantity) < 1 ||
+          Number(c.quantity) > 100,
+      ) ||
+      new Set(form.value.components.map((c) => Number(c.productId))).size !==
+        form.value.components.length)
+  ) {
+    localError.value = 'Agregá productos distintos con cantidades enteras entre 1 y 100.'
+    return
+  }
   emit('save', {
     name: form.value.name.trim(),
     price: Number(form.value.price),
     categoryId: Number(form.value.categoryId),
     isAvailable: form.value.isAvailable,
     imageFile: imageFile.value,
+    components: isPromotion.value
+      ? form.value.components.map((c) => ({
+          productId: Number(c.productId),
+          quantity: Number(c.quantity),
+        }))
+      : [],
+    freeDelivery: isPromotion.value && form.value.freeDelivery,
   })
 }
 
@@ -278,6 +339,63 @@ function createCategory() {
             helper="Si está desactivado, no aparece para cargar pedidos."
           />
         </div>
+      </section>
+      <section class="grid gap-3 rounded-xl border border-line p-4">
+        <UiSwitch
+          v-model="isPromotion"
+          label="Es una promo / combo"
+          helper="Definí qué productos incluye. El precio de arriba es el total de la promo."
+        />
+        <template v-if="isPromotion">
+          <p v-if="loadingComponents" class="text-sm text-muted">Cargando productos…</p>
+          <p v-if="componentLoadError" role="alert" class="text-sm text-danger">
+            {{ componentLoadError }}
+          </p>
+          <UiButton v-if="componentLoadError" variant="secondary" @click="loadComponentProducts"
+            >Reintentar</UiButton
+          >
+          <div
+            v-for="(component, index) in form.components"
+            :key="index"
+            class="grid grid-cols-[1fr_80px_auto] items-end gap-2"
+          >
+            <UiSelect
+              v-model="component.productId"
+              label="Producto"
+              :options="componentOptions"
+              placeholder="Seleccionar"
+              required
+            />
+            <UiInput
+              v-model="component.quantity"
+              label="Cantidad"
+              type="number"
+              min="1"
+              max="100"
+              step="1"
+              required
+            />
+            <button
+              type="button"
+              class="pb-3 text-sm text-danger"
+              :aria-label="`Quitar producto ${index + 1}`"
+              @click="form.components.splice(index, 1)"
+            >
+              Quitar
+            </button>
+          </div>
+          <UiButton
+            variant="secondary"
+            :disabled="loadingComponents || !!componentLoadError"
+            @click="form.components.push({ productId: '', quantity: 1 })"
+            >Agregar producto a la promo</UiButton
+          >
+          <UiSwitch
+            v-model="form.freeDelivery"
+            label="Incluye envío gratis"
+            helper="Bonifica el envío completo del pedido cuando lleva esta promo."
+          />
+        </template>
       </section>
     </form>
 

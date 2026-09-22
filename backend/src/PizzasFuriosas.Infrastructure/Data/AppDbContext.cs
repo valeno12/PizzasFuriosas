@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
 
     public DbSet<Category> Categories { get; set; }
     public DbSet<Product> Products { get; set; }
+    public DbSet<ProductComponent> ProductComponents { get; set; }
+    public DbSet<OrderItemComponent> OrderItemComponents { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Customer> Customers { get; set; }
     public DbSet<Address> Addresses { get; set; }
@@ -65,6 +67,16 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Purchase>().HasQueryFilter(p => !p.IsDeleted);
 
         modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
+
+        modelBuilder.Entity<Product>().Property(p => p.FreeDelivery).HasDefaultValue(false);
+        modelBuilder.Entity<OrderItem>().Property(p => p.FreeDelivery).HasDefaultValue(false);
+        modelBuilder.Entity<ProductComponent>().HasOne(c => c.Promotion).WithMany(p => p.Components)
+            .HasForeignKey(c => c.PromotionId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ProductComponent>().HasOne(c => c.Product).WithMany()
+            .HasForeignKey(c => c.ProductId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ProductComponent>().HasIndex(c => new { c.PromotionId, c.ProductId }).IsUnique();
+        modelBuilder.Entity<OrderItemComponent>().HasOne(c => c.OrderItem).WithMany(i => i.Components)
+            .HasForeignKey(c => c.OrderItemId).OnDelete(DeleteBehavior.Cascade);
 
         // --- SEED DATA ---
         modelBuilder.Entity<Category>().HasData(

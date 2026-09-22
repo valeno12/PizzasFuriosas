@@ -26,6 +26,8 @@ export function mapOrder(o) {
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       subtotal: item.subtotal,
+      components: item.components || [],
+      freeDelivery: item.freeDelivery || false,
     })),
   }
 }

@@ -328,8 +328,16 @@ async function confirmCancel() {
           <div class="list-panel mt-2">
             <div v-for="item in selectedOrder.items" :key="item.id" class="list-row">
               <span
-                ><strong>{{ item.quantity }}x</strong> {{ item.name }}</span
-              >
+                ><strong>{{ item.quantity }}x</strong> {{ item.name }}
+                <span v-if="item.components?.length" class="block text-xs text-muted">{{
+                  item.components
+                    .map((c) => `${c.quantity * item.quantity}× ${c.productName}`)
+                    .join(' + ')
+                }}</span>
+                <span v-if="item.freeDelivery" class="block text-xs text-primary"
+                  >Incluye envío gratis</span
+                >
+              </span>
               <strong>{{ formatMoney(item.subtotal) }}</strong>
             </div>
           </div>

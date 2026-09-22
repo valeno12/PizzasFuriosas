@@ -98,7 +98,10 @@ function toggleGroup(statusId) {
 
 function orderItemLines(order) {
   return order.items?.length
-    ? order.items.map((item) => `- ${item.quantity} x ${item.name}`)
+    ? order.items.flatMap((item) => [
+        `- ${item.quantity} x ${item.name}${item.freeDelivery ? ' (envío gratis)' : ''}`,
+        ...(item.components || []).map((c) => `  ${c.quantity * item.quantity} x ${c.productName}`),
+      ])
     : ['- Detalle a confirmar']
 }
 
@@ -336,8 +339,16 @@ async function confirmCancel() {
                     class="flex items-center justify-between gap-2 text-[0.9rem]"
                   >
                     <span
-                      ><strong>{{ item.quantity }}×</strong> {{ item.name }}</span
-                    >
+                      ><strong>{{ item.quantity }}×</strong> {{ item.name }}
+                      <span v-if="item.components?.length" class="block text-xs text-muted">{{
+                        item.components
+                          .map((c) => `${c.quantity * item.quantity}× ${c.productName}`)
+                          .join(' + ')
+                      }}</span>
+                      <span v-if="item.freeDelivery" class="block text-xs text-primary"
+                        >Incluye envío gratis</span
+                      >
+                    </span>
                     <span class="text-muted">{{ formatMoney(item.subtotal) }}</span>
                   </div>
                 </div>

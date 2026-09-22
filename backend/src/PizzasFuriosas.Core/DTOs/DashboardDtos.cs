@@ -20,5 +20,6 @@ public record StatisticsResponse(
     int TotalDeliveryOrders,
     int TotalTakeAwayOrders,
     int TotalCashPayments,
-    int TotalTransferPayments
+    int TotalTransferPayments,
+    List<TopProductDto>? TopPromotions = null
 );

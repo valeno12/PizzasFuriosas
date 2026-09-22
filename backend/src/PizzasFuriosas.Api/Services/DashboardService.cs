@@ -54,19 +54,26 @@ public class DashboardService(AppDbContext context)
 
         var allOrders = await context.Orders
             .AsNoTracking()
-            .Include(o => o.Items)
-            .ThenInclude(i => i.Product)
+            .Include(o => o.Items).ThenInclude(i => i.Components)
             .Include(o => o.Customer)
             .Where(o => o.StatusId == OrderStatuses.Delivered && o.CreatedAt >= startDate && o.CreatedAt <= endDate)
             .ToListAsync(cancellationToken);
 
         var allItems = allOrders.SelectMany(o => o.Items).ToList();
 
+        // No unir Items con Products: un producto borrado no debe ocultar una venta.
+        var legacyProductIds = allItems.Where(i => i.ProductNameSnapshot == null).Select(i => i.ProductId).Distinct().ToList();
+        var legacyNames = await context.Products.Where(p => legacyProductIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
+
         var topProducts = allItems
+            .SelectMany(i => i.Components.Count > 0
+                ? i.Components.Select(c => new { c.ProductId, Name = c.ProductName, Quantity = c.Quantity * i.Quantity })
+                : new[] { new { i.ProductId, Name = i.ProductNameSnapshot ?? legacyNames.GetValueOrDefault(i.ProductId, "Producto Borrado"), i.Quantity } })
             .GroupBy(i => i.ProductId)
             .Select(g => new TopProductDto(
                 g.Key,
-                g.First().Product?.Name ?? "Producto Borrado",
+                g.First().Name,
                 g.Sum(i => i.Quantity)))
             .OrderByDescending(p => p.TotalQuantitySold)
             .Take(5)
@@ -97,7 +104,10 @@ public class DashboardService(AppDbContext context)
             TotalDeliveryOrders: totalDelivery,
             TotalTakeAwayOrders: totalTakeAway,
             TotalCashPayments: totalCash,
-            TotalTransferPayments: totalTransfer);
+            TotalTransferPayments: totalTransfer,
+            TopPromotions: allItems.Where(i => i.Components.Count > 0).GroupBy(i => i.ProductId)
+                .Select(g => new TopProductDto(g.Key, g.First().ProductNameSnapshot ?? "Promo", g.Sum(i => i.Quantity)))
+                .OrderByDescending(p => p.TotalQuantitySold).Take(5).ToList());
     }
 
     // Npgsql exige DateTime en UTC para "timestamp with time zone".

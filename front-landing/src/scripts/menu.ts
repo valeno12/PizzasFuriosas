@@ -6,6 +6,8 @@ type Product = {
   price: number
   categoryId: number
   categoryName: string
+  components?: { productId: number; productName: string; quantity: number }[]
+  freeDelivery?: boolean
   imageUrl: string | null
 }
 type Category = { id: number; name: string }
@@ -130,6 +132,16 @@ function renderGrid() {
     meta.className = 'product-meta'
     meta.innerHTML = `<h3></h3><span class="price">${money.format(p.price)}</span>`
     meta.querySelector('h3')!.textContent = p.name
+    if (p.components?.length) {
+      const detail = document.createElement('p')
+      detail.textContent = p.components.map(c => `${c.quantity}× ${c.productName}`).join(' + ')
+      meta.appendChild(detail)
+    }
+    if (p.freeDelivery) {
+      const badge = document.createElement('small')
+      badge.textContent = 'Incluye envío gratis'
+      meta.appendChild(badge)
+    }
     card.appendChild(meta)
 
     if (qty > 0) {
@@ -207,7 +219,10 @@ function buildWhatsappUrl() {
   const lines = [...cart.entries()]
     .map(([id, qty]) => {
       const p = products.find((x) => x.id === id)
-      return p ? `• ${qty}x ${p.name}` : ''
+      return p ? [
+        `• ${qty}x ${p.name}${p.freeDelivery ? ' (envío gratis)' : ''}`,
+        ...(p.components || []).map(c => `  ${c.quantity * qty}x ${c.productName}`),
+      ].join('\n') : ''
     })
     .filter(Boolean)
 

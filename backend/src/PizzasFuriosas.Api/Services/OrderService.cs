@@ -12,7 +12,7 @@ public class OrderService(AppDbContext context)
 {
     private const string DeliveryShippingMethod = "Delivery";
 
-    private static readonly Expression<Func<Order, OrderResponse>> ToResponse = o => new OrderResponse(
+    private readonly Expression<Func<Order, OrderResponse>> ToResponse = o => new OrderResponse(
         o.Id,
         o.CustomerId,
         o.Customer != null ? o.Customer.Name : "Cliente Borrado",
@@ -32,10 +32,13 @@ public class OrderService(AppDbContext context)
         o.Items.Select(i => new OrderItemResponse(
             i.Id,
             i.ProductId,
-            i.Product != null ? i.Product.Name : "Producto Borrado",
+            i.ProductNameSnapshot ?? (context.Products.Where(p => p.Id == i.ProductId)
+                .Select(p => p.Name).FirstOrDefault() ?? "Producto Borrado"),
             i.Quantity,
             i.UnitPrice,
-            i.Quantity * i.UnitPrice)).ToList());
+            i.Quantity * i.UnitPrice,
+            i.Components.Select(c => new ProductComponentResponse(c.ProductId, c.ProductName, c.Quantity)).ToList(),
+            i.FreeDelivery)).ToList());
 
     public async Task<PaginatedResult<OrderResponse>> GetAllAsync(OrderFilterDto filter, int page, int pageSize, CancellationToken cancellationToken = default)
     {
@@ -49,7 +52,7 @@ public class OrderService(AppDbContext context)
         if (filter.CustomerId.HasValue)
             query = query.Where(o => o.CustomerId == filter.CustomerId.Value);
         if (filter.ProductId.HasValue)
-            query = query.Where(o => o.Items.Any(i => i.ProductId == filter.ProductId.Value));
+            query = query.Where(o => o.Items.Any(i => i.ProductId == filter.ProductId.Value || i.Components.Any(c => c.ProductId == filter.ProductId.Value)));
         if (!string.IsNullOrWhiteSpace(filter.ShippingMethod))
             query = query.Where(o => o.ShippingMethod.ToLower() == filter.ShippingMethod.ToLower());
         if (!string.IsNullOrWhiteSpace(filter.PaymentMethod))
@@ -132,10 +135,7 @@ public class OrderService(AppDbContext context)
             }
         }
 
-        var productIds = request.Items.Select(i => i.ProductId).Distinct().ToList();
-        var productsInDb = await context.Products
-            .Where(p => productIds.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id, cancellationToken);
+        var newItems = await BuildItemsAsync(request.Items, cancellationToken);
 
         var order = new Order
         {
@@ -150,25 +150,8 @@ public class OrderService(AppDbContext context)
             Items = new List<OrderItem>()
         };
 
-        decimal totalPrice = order.DeliveryCost;
-
-        foreach (var item in request.Items)
-        {
-            if (!productsInDb.TryGetValue(item.ProductId, out var product))
-                throw new BadRequestException($"El producto con Id {item.ProductId} no existe.");
-
-            var orderItem = new OrderItem
-            {
-                ProductId = product.Id,
-                Quantity = item.Quantity,
-                UnitPrice = product.Price
-            };
-
-            totalPrice += orderItem.Quantity * orderItem.UnitPrice;
-            order.Items.Add(orderItem);
-        }
-
-        order.TotalPrice = totalPrice;
+        order.Items = newItems;
+        ApplyTotals(order);
 
         context.Orders.Add(order);
         await context.SaveChangesAsync(cancellationToken);
@@ -179,7 +162,7 @@ public class OrderService(AppDbContext context)
     public async Task UpdateAsync(int id, UpdateOrderRequest request, CancellationToken cancellationToken = default)
     {
         var order = await context.Orders
-            .Include(o => o.Items)
+            .Include(o => o.Items).ThenInclude(i => i.Components)
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
         if (order == null)
@@ -214,16 +197,7 @@ public class OrderService(AppDbContext context)
             }
         }
 
-        var productIds = request.Items.Select(i => i.ProductId).Distinct().ToList();
-        var productsInDb = await context.Products
-            .Where(p => productIds.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id, cancellationToken);
-
-        foreach (var item in request.Items)
-        {
-            if (!productsInDb.ContainsKey(item.ProductId))
-                throw new BadRequestException($"El producto con Id {item.ProductId} no existe.");
-        }
+        var newItems = await BuildItemsAsync(request.Items, cancellationToken, order.Items);
 
         if (newAddress != null)
         {
@@ -245,23 +219,55 @@ public class OrderService(AppDbContext context)
         order.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
         order.ScheduledFor = request.ScheduledFor;
 
-        decimal totalPrice = order.DeliveryCost;
-
-        foreach (var item in request.Items)
-        {
-            var product = productsInDb[item.ProductId];
-            var orderItem = new OrderItem
-            {
-                ProductId = product.Id,
-                Quantity = item.Quantity,
-                UnitPrice = product.Price
-            };
-            totalPrice += orderItem.Quantity * orderItem.UnitPrice;
-            order.Items.Add(orderItem);
-        }
-
-        order.TotalPrice = totalPrice;
+        order.Items = newItems;
+        ApplyTotals(order);
         await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<List<OrderItem>> BuildItemsAsync(List<CreateOrderItemRequest> requests,
+        CancellationToken cancellationToken, ICollection<OrderItem>? previousItems = null)
+    {
+        if (requests.Count == 0 || requests.Any(i => i.Quantity <= 0))
+            throw new BadRequestException("El pedido debe incluir productos con cantidades mayores a cero.");
+        var ids = requests.Select(i => i.ProductId).Distinct().ToList();
+        // Incluye borrados para validar explícitamente sin ocultar componentes de una promo.
+        var products = await context.Products.IgnoreQueryFilters()
+            .Include(p => p.Components).ThenInclude(c => c.Product)
+            .Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancellationToken);
+        var result = new List<OrderItem>();
+        foreach (var request in requests)
+        {
+            var previous = previousItems?.FirstOrDefault(i => i.ProductId == request.ProductId && i.Components.Count > 0);
+            if (previous != null)
+            {
+                result.Add(new OrderItem {
+                    ProductId = previous.ProductId, ProductNameSnapshot = previous.ProductNameSnapshot,
+                    Quantity = request.Quantity, UnitPrice = previous.UnitPrice, FreeDelivery = previous.FreeDelivery,
+                    Components = previous.Components.Select(c => new OrderItemComponent {
+                        ProductId = c.ProductId, ProductName = c.ProductName, Quantity = c.Quantity
+                    }).ToList()
+                });
+                continue;
+            }
+            if (!products.TryGetValue(request.ProductId, out var product) || product.IsDeleted)
+                throw new BadRequestException($"El producto con Id {request.ProductId} no existe.");
+            if (product.Components.Count > 0 && (!product.IsAvailable || product.Components.Any(c => c.Product.IsDeleted || !c.Product.IsAvailable)))
+                throw new BadRequestException($"La promo {product.Name} tiene productos no disponibles.");
+            result.Add(new OrderItem {
+                ProductId = product.Id, ProductNameSnapshot = product.Name,
+                Quantity = request.Quantity, UnitPrice = product.Price, FreeDelivery = product.FreeDelivery,
+                Components = product.Components.Select(c => new OrderItemComponent {
+                    ProductId = c.ProductId, ProductName = c.Product.Name, Quantity = c.Quantity
+                }).ToList()
+            });
+        }
+        return result;
+    }
+
+    private static void ApplyTotals(Order order)
+    {
+        if (order.Items.Any(i => i.FreeDelivery)) order.DeliveryCost = 0;
+        order.TotalPrice = order.DeliveryCost + order.Items.Sum(i => i.Quantity * i.UnitPrice);
     }
 
     public async Task UpdateStatusAsync(int id, UpdateOrderStatusRequest request, CancellationToken cancellationToken = default)
