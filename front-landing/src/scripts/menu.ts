@@ -21,7 +21,7 @@ const money = new Intl.NumberFormat('es-AR', {
 
 // Estado
 let products: Product[] = []
-let activeCategory: number | null = null
+let activeCategory: number | 'promos' | null = null
 let delivery = 'Take Away'
 const cart = new Map<number, number>() // productId -> cantidad
 
@@ -87,11 +87,18 @@ function renderFilters(categories: Category[]) {
   // Solo mostramos categorías que tengan al menos un producto disponible cargado.
   const usedCategoryIds = new Set(products.map((p) => p.categoryId))
   const visibleCategories = categories.filter((c) => usedCategoryIds.has(c.id))
-  const tabs = [{ id: null as number | null, name: 'Todas' }, ...visibleCategories]
+  const hasPromotions = products.some(p => p.components?.length)
+  const regularCategories = visibleCategories.filter(c => products.some(p => p.categoryId === c.id && !p.components?.length))
+  const tabs: { id: number | 'promos' | null; name: string }[] = [
+    ...(hasPromotions ? [{ id: 'promos' as const, name: 'Promos' }] : []),
+    { id: null, name: 'Todas' },
+    ...regularCategories,
+  ]
   el.filters.innerHTML = ''
   for (const tab of tabs) {
     const btn = document.createElement('button')
-    btn.className = 'filter' + (activeCategory === tab.id ? ' active' : '')
+    btn.className = 'filter' + (tab.id === 'promos' ? ' filter-promos' : '') + (activeCategory === tab.id ? ' active' : '')
+    btn.setAttribute('aria-pressed', String(activeCategory === tab.id))
     btn.textContent = tab.name
     btn.type = 'button'
     btn.addEventListener('click', () => {
@@ -105,7 +112,9 @@ function renderFilters(categories: Category[]) {
 
 function renderGrid() {
   if (!el.grid) return
-  const list = products.filter((p) => activeCategory === null || p.categoryId === activeCategory)
+  const list = products.filter(p => activeCategory === null || (activeCategory === 'promos'
+    ? Boolean(p.components?.length) : p.categoryId === activeCategory && !p.components?.length))
+    .sort((a, b) => Number(Boolean(b.components?.length)) - Number(Boolean(a.components?.length)))
 
   if (list.length === 0) {
     el.grid.innerHTML = '<p class="menu-state">No hay productos en esta categoría.</p>'
@@ -113,12 +122,35 @@ function renderGrid() {
   }
 
   el.grid.innerHTML = ''
+  let previousGroup: boolean | undefined
+  const hasPromotions = list.some(p => p.components?.length)
   for (const p of list) {
+    const isPromotion = Boolean(p.components?.length)
+    if (hasPromotions && isPromotion !== previousGroup) {
+      const heading = document.createElement('div')
+      heading.className = 'catalog-group-heading'
+      const title = document.createElement('h3')
+      title.textContent = isPromotion ? 'Promos para compartir' : 'La carta'
+      heading.appendChild(title)
+      if (isPromotion) {
+        const description = document.createElement('p')
+        description.textContent = 'Elegí tu combo y sumalo al pedido.'
+        heading.appendChild(description)
+      }
+      el.grid.appendChild(heading)
+    }
+    previousGroup = isPromotion
     const qty = cart.get(p.id) || 0
     const card = document.createElement('article')
-    card.className = 'product-card' + (qty > 0 ? ' in-cart' : '')
+    card.className = 'product-card' + (isPromotion ? ' product-card-promo' : '') + (qty > 0 ? ' in-cart' : '')
+    if (isPromotion) {
+      const label = document.createElement('span')
+      label.className = 'product-promo-label'
+      label.textContent = 'PROMO'
+      card.appendChild(label)
+    }
 
-    // Imagen solo si el producto tiene foto real (la mayoría no tendrá)
+    // Usa la imagen cargada en el catálogo, también para los ejemplos locales.
     if (p.imageUrl) {
       const img = document.createElement('img')
       img.className = 'product-photo'
@@ -134,11 +166,13 @@ function renderGrid() {
     meta.querySelector('h3')!.textContent = p.name
     if (p.components?.length) {
       const detail = document.createElement('p')
+      detail.className = 'product-components'
       detail.textContent = p.components.map(c => `${c.quantity}× ${c.productName}`).join(' + ')
       meta.appendChild(detail)
     }
     if (p.freeDelivery) {
       const badge = document.createElement('small')
+      badge.className = 'product-delivery-badge'
       badge.textContent = 'Incluye envío gratis'
       meta.appendChild(badge)
     }

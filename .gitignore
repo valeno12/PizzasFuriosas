@@ -32,3 +32,7 @@ appsettings.*.json
 !appsettings.Development.json
 plan.md
 .claude
+
+## Datos y recursos de demo locales
+/.dev-seed/
+/front-landing/public/images/demo

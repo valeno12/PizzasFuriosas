@@ -12,6 +12,7 @@ import UiSwitch from '../ui/UiSwitch.vue'
 const props = defineProps({
   open: { type: Boolean, default: false },
   product: { type: Object, default: null },
+  createAsPromotion: { type: Boolean, default: false },
   categories: { type: Array, default: () => [] },
   isSaving: { type: Boolean, default: false },
   errorMessage: { type: String, default: '' },
@@ -72,7 +73,9 @@ watch(
       return
     }
     localError.value = ''
-    isPromotion.value = Boolean(props.product?.components?.length)
+    isPromotion.value = props.product
+      ? Boolean(props.product.components?.length)
+      : props.createAsPromotion
     loadComponentProducts()
     imageFile.value = null
     previewUrl.value = props.product?.image || ''
@@ -92,7 +95,12 @@ watch(
       : {
           name: '',
           price: '',
-          categoryId: props.categories[0]?.id || '',
+          categoryId:
+            (props.createAsPromotion
+              ? props.categories.find((c) => c.name.toLowerCase() === 'promos')?.id
+              : null) ||
+            props.categories[0]?.id ||
+            '',
           isAvailable: true,
           components: [],
           freeDelivery: false,
@@ -219,11 +227,21 @@ function createCategory() {
 <template>
   <AppDrawer
     :open="open"
-    :title="isEditing ? 'Editar producto' : 'Nuevo producto'"
+    :title="
+      isEditing
+        ? isPromotion
+          ? 'Editar promo'
+          : 'Editar producto'
+        : isPromotion
+          ? 'Nueva promo'
+          : 'Nuevo producto'
+    "
     :description="
       isCropping
         ? 'Ajustá la imagen (1:1)'
-        : 'Datos comerciales, categoría, disponibilidad e imagen.'
+        : isPromotion
+          ? 'Definí el combo, su precio y los productos incluidos.'
+          : 'Datos comerciales, categoría, disponibilidad e imagen.'
     "
     @close="emit('close')"
   >
@@ -253,10 +271,12 @@ function createCategory() {
         {{ localError || errorMessage }}
       </div>
 
-      <section class="grid gap-4 sm:grid-cols-[148px_1fr]">
+      <section class="grid gap-4 sm:grid-cols-[132px_minmax(0,1fr)]">
         <!-- Imagen -->
-        <div>
-          <span class="mb-2 block text-[0.86rem] font-bold text-foreground">Imagen</span>
+        <div class="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-x-4 sm:block">
+          <span class="col-span-full mb-2 block text-[0.86rem] font-bold text-foreground"
+            >Imagen</span
+          >
           <div class="aspect-square overflow-hidden rounded-3xl border border-line bg-surface-2">
             <img
               v-if="previewUrl"
@@ -269,7 +289,7 @@ function createCategory() {
             </div>
           </div>
           <label
-            class="mt-3 inline-flex min-h-[40px] w-full cursor-pointer items-center justify-center rounded-[10px] border border-line bg-surface-2 px-3.5 text-[0.875rem] font-bold transition hover:border-line-strong"
+            class="inline-flex min-h-[40px] w-full cursor-pointer sm:mt-3 items-center justify-center rounded-[10px] border border-line bg-surface-2 px-3.5 text-[0.875rem] font-bold transition hover:border-line-strong"
           >
             Cambiar
             <input
@@ -279,9 +299,7 @@ function createCategory() {
               @change="onFileChange"
             />
           </label>
-          <p class="mt-2 text-center text-xs text-muted sm:text-left">
-            JPG, PNG o WEBP hasta 5 MB.
-          </p>
+          <p class="col-span-full mt-2 text-xs text-muted">JPG, PNG o WEBP hasta 5 MB.</p>
         </div>
 
         <!-- Campos -->
@@ -295,7 +313,7 @@ function createCategory() {
           />
           <UiInput
             v-model="form.price"
-            label="Precio"
+            :label="isPromotion ? 'Precio total de la promo' : 'Precio'"
             required
             type="number"
             inputmode="numeric"
@@ -340,7 +358,7 @@ function createCategory() {
           />
         </div>
       </section>
-      <section class="grid gap-3 rounded-xl border border-line p-4">
+      <section class="grid gap-4 rounded-xl border border-line bg-surface-2 p-3 sm:p-4">
         <UiSwitch
           v-model="isPromotion"
           label="Es una promo / combo"
@@ -354,10 +372,16 @@ function createCategory() {
           <UiButton v-if="componentLoadError" variant="secondary" @click="loadComponentProducts"
             >Reintentar</UiButton
           >
+          <p
+            v-if="!form.components.length"
+            class="rounded-lg border border-dashed border-line-strong p-3 text-sm text-muted"
+          >
+            Agregá los productos y las cantidades que incluye el combo.
+          </p>
           <div
             v-for="(component, index) in form.components"
             :key="index"
-            class="grid grid-cols-[1fr_80px_auto] items-end gap-2"
+            class="grid grid-cols-[minmax(0,1fr)_72px] items-end gap-2 rounded-xl border border-line bg-surface p-3"
           >
             <UiSelect
               v-model="component.productId"
@@ -377,7 +401,7 @@ function createCategory() {
             />
             <button
               type="button"
-              class="pb-3 text-sm text-danger"
+              class="col-span-full justify-self-end text-xs font-semibold text-danger"
               :aria-label="`Quitar producto ${index + 1}`"
               @click="form.components.splice(index, 1)"
             >
@@ -402,7 +426,7 @@ function createCategory() {
     <template v-if="!isCropping" #footer>
       <UiButton variant="secondary" :disabled="isSaving" @click="emit('close')">Cancelar</UiButton>
       <UiButton variant="primary" :loading="isSaving" @click="submit">{{
-        isEditing ? 'Guardar cambios' : 'Crear producto'
+        isEditing ? 'Guardar cambios' : isPromotion ? 'Crear promo' : 'Crear producto'
       }}</UiButton>
     </template>
   </AppDrawer>

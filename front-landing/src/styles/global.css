@@ -439,6 +439,45 @@ h1 {
   border-radius: 16px;
   background: var(--card);
 }
+.product-card-promo {
+  position: relative;
+  border-color: rgba(232, 98, 47, 0.5);
+  background: linear-gradient(155deg, rgba(232, 98, 47, 0.08), transparent 65%), var(--card);
+}
+.product-promo-label {
+  align-self: flex-start;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--orange);
+  color: #171310;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.filter-promos {
+  border-color: var(--orange);
+  color: var(--orange);
+  font-weight: 900;
+}
+.catalog-group-heading {
+  grid-column: 1 / -1;
+  padding: 8px 0 0;
+}
+.catalog-group-heading h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 22px;
+}
+.catalog-group-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.catalog-group-heading:not(:first-child) {
+  margin-top: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
 .product-card.in-cart {
   box-shadow:
     0 0 0 1px rgba(232, 98, 47, 0.35),
@@ -447,16 +486,39 @@ h1 {
 /* La imagen es opcional: solo aparece si el producto tiene foto real */
 .product-card img.product-photo {
   width: 100%;
-  aspect-ratio: 1 / 0.82;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 12px;
   filter: saturate(1.08) contrast(1.03);
 }
 .product-meta {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px 10px;
+}
+.product-meta h3 {
+  overflow-wrap: anywhere;
+}
+.product-components,
+.product-delivery-badge {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.product-components {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.product-delivery-badge {
+  justify-self: start;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(232, 98, 47, 0.14);
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 700;
 }
 .product-meta h3 {
   margin: 0;
@@ -984,7 +1046,7 @@ footer {
     padding: 12px;
   }
   .product-card img.product-photo {
-    aspect-ratio: 1 / 0.72;
+    aspect-ratio: 1 / 1;
   }
   .product-card .product-meta h3 {
     font-size: 17px;
